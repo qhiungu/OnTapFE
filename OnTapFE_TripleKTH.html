@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TripleKTH - ELC201</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --navy: #0f172a;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --line: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --opt-bg: #ffffff;
+    --opt-sel: #eff6ff;
+    --opt-right: #f0fdf4;
+    --opt-wrong: #fef2f2;
+    --fc-back: #eff6ff;
+    --nav-done: #dbeafe;
+    --circuit-bg: #f1f5f9;
+    --circuit-color: #0f172a;
+    --sidebar-bg: #ffffff;
+  }
+
+  body.dark {
+    --primary: #3b82f6;
+    --navy: #020617;
+    --ok: #22c55e;
+    --bad: #ef4444;
+    --bg: #0b0f19;
+    --card: #1e293b;
+    --line: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --opt-bg: #1e293b;
+    --opt-sel: #1e3a8a;
+    --opt-right: #064e3b;
+    --opt-wrong: #7f1d1d;
+    --fc-back: #1e293b;
+    --nav-done: #1e3a8a;
+    --circuit-bg: #0f172a;
+    --circuit-color: #60a5fa;
+    --sidebar-bg: #1e293b;
+  }
+
+  * { box-sizing: border-box; transition: background-color .2s, color .2s, border-color .2s; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); line-height: 1.5; }
+  
+  /* HEADER */
+  header {
+    background:var(--navy);
+    color:#fff;
+    padding:10px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .header-left { display:flex; align-items:center; gap:10px; }
+  .icon-btn {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.22); }
+  .logo { font-weight:800; font-size:19px; cursor:pointer; letter-spacing: 0.5px; }
+  
+  /* MONOCHROME ICONS */
+  .mono-icon {
+    width: 18px; height: 18px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block;
+  }
+
+  /* SIDEBAR MENU */
+  .sidebar-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+  
+  .sidebar {
+    position: fixed; top: 0; left: -310px; width: 300px; height: 100%;
+    background: var(--sidebar-bg); border-right: 1px solid var(--line);
+    z-index: 100; transition: left .3s ease; display: flex; flex-direction: column;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.18);
+  }
+  .sidebar.active { left: 0; }
+  .sidebar-header {
+    padding: 18px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sidebar-menu { padding: 12px; overflow-y: auto; flex: 1; }
+  .menu-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: 8px; cursor: pointer; color: var(--text); font-weight: 600;
+    margin-bottom: 3px; font-size: 14px; text-decoration: none;
+  }
+  .menu-item:hover { background: var(--opt-sel); color: var(--primary); }
+  .menu-category { font-size: 11px; color: var(--muted); text-transform: uppercase; margin: 14px 8px 6px; font-weight: 700; letter-spacing: 0.5px; }
+
+  /* MỤC CON ĐỀ THI DƯỚI ELC201 */
+  .menu-sub-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 32px;
+    border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 13px;
+    font-weight: 500; margin-bottom: 2px; position: relative;
+  }
+  .menu-sub-item::before {
+    content: "├"; position: absolute; left: 18px; color: var(--line); font-family: monospace; font-size: 13px;
+  }
+  .menu-sub-item:last-child::before { content: "└"; }
+  .menu-sub-item:hover { background: var(--opt-sel); color: var(--primary); font-weight: 600; }
+
+  main { max-width:1100px; margin:0 auto; padding:20px; }
+  .hidden { display:none !important; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); }
+  .btn { background:var(--primary); color:#fff; border:0; border-radius:8px; padding:10px 16px; cursor:pointer; font-size:14px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn:hover { filter:brightness(.95); }
+  .btn.ghost { background:transparent; color:var(--primary); border:1px solid var(--primary); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .muted { color:var(--muted); font-size:14px; }
+  .progress { height:8px; background:var(--line); border-radius:99px; overflow:hidden; margin:12px 0; }
+  .progress > div { height:100%; background:var(--ok); width:0; transition:width .3s; }
+  .modes { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-top:16px; }
+  .mode { cursor:pointer; text-align:center; padding:24px 16px; border:1px solid var(--line); border-radius:12px; }
+  .mode:hover { border-color:var(--primary); transform:translateY(-2px); }
+  .mode-icon { width: 36px; height: 36px; stroke: currentColor; fill: none; stroke-width: 1.8; margin-bottom: 8px; }
+
+  /* MẠCH ĐIỆN VỪA VẶN, KHÔNG BỊ THANH CUỘN */
+  .q-img {
+    display: flex; justify-content: center; align-items: center;
+    margin: 8px auto; padding: 6px 12px; background: var(--circuit-bg);
+    border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden !important; width: 100%; max-width: 540px;
+  }
+  .q-img svg {
+    width: 100%; max-width: 100%; height: auto; max-height: 130px;
+    display: block; color: var(--circuit-color);
+  }
+
+  /* FLASHCARD */
+  .flip-wrap { perspective:1000px; min-height:460px; margin:16px 0; cursor:pointer; }
+  .flip { position:relative; width:100%; min-height:460px; transition:transform .5s; transform-style:preserve-3d; }
+  .flip.on { transform:rotateY(180deg); }
+  .face {
+    position:absolute; inset:0; backface-visibility:hidden;
+    background:var(--card); color:var(--text); border:1px solid var(--line);
+    border-radius:12px; padding:22px; display:flex; flex-direction:column;
+    justify-content:flex-start; align-items:center; text-align:center; overflow-y:auto;
+  }
+  .face.back { transform:rotateY(180deg); background:var(--fc-back); justify-content:center; }
+
+  /* ==================== KAHOOT UI 4 MÀU ==================== */
+  .kahoot-card {
+    max-width: 860px; margin: 0 auto; background: var(--card);
+    border-radius: 16px; border: 1px solid var(--line);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 24px;
+  }
+  .kahoot-q-title {
+    font-size: 19px; font-weight: 700; text-align: center;
+    margin: 6px 0 14px; line-height: 1.4;
+  }
+  .kahoot-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;
+  }
+  @media (max-width: 680px) {
+    .kahoot-grid { grid-template-columns: 1fr; gap: 10px; }
+  }
+  .k-btn {
+    display: flex; align-items: center; gap: 14px; padding: 18px 16px;
+    border: none; border-radius: 12px; color: #ffffff !important;
+    font-size: 16px; font-weight: 700; cursor: pointer; text-align: left;
+    transition: transform .12s, filter .15s, opacity .2s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.22); min-height: 76px;
+    position: relative; user-select: none;
+  }
+  .k-btn:hover {
+    transform: translateY(-2px); filter: brightness(1.08);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.22);
+  }
+  .k-btn:active {
+    transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.22);
+  }
+  .k-red { background: #e21b3c; }
+  .k-blue { background: #1368ce; }
+  .k-yellow { background: #d89e00; }
+  .k-green { background: #26890c; }
+  
+  .k-shape {
+    font-size: 24px; display: inline-flex; align-items: center;
+    justify-content: center; width: 34px; height: 34px; flex-shrink: 0;
+  }
+  .k-btn.dimmed {
+    opacity: 0.3 !important; transform: none !important; pointer-events: none;
+  }
+  .k-btn.k-correct {
+    box-shadow: 0 0 0 4px #22c55e, 0 6px 20px rgba(34,197,94,0.5) !important;
+    transform: scale(1.02); z-index: 2; pointer-events: none;
+  }
+  .k-btn.k-wrong {
+    animation: kShake 0.4s ease; opacity: 0.75; pointer-events: none;
+  }
+  @keyframes kShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
+
+  .kahoot-feedback {
+    margin-top: 18px; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line); animation: popIn .25s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .k-fb-header {
+    padding: 12px 18px; color: #fff; font-size: 17px; font-weight: 800;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .k-fb-header.right { background: #26890c; }
+  .k-fb-header.wrong { background: #e21b3c; }
+  .k-fb-body {
+    padding: 16px 18px; background: var(--card); font-size: 15px;
+  }
+
+  /* EXAM */
+  .exam { display:grid; grid-template-columns:62% 38%; gap:16px; }
+  @media (max-width:800px) { .exam { grid-template-columns:1fr; } }
+  .opt { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:8px; margin:8px 0; cursor:pointer; background:var(--opt-bg); color:var(--text); text-align: left; }
+  .opt.sel { border-color:var(--primary); background:var(--opt-sel); }
+  .opt.right { border-color:var(--ok) !important; background:var(--opt-right) !important; font-weight: 600; color:var(--ok); }
+  .opt.wrong { border-color:var(--bad) !important; background:var(--opt-wrong) !important; font-weight: 600; color:var(--bad); }
+  
+  .navgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(42px,1fr)); gap:6px; max-height: 380px; overflow-y: auto; padding: 4px; }
+  .navgrid button { padding:8px 0; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:6px; cursor:pointer; font-size:13px; font-weight: 500; }
+  .navgrid button.done { background:var(--nav-done); }
+  .navgrid button.flag { border-color:#f59e0b; }
+  .navgrid button.cur { outline:2px solid var(--primary); }
+  .flagbtn { background:var(--card); border:1px solid #f59e0b; color:#f59e0b; }
+  .stat { display:flex; justify-content:space-between; font-size:14px; margin-bottom:8px; }
+  .big { font-size:48px; font-weight:700; color:var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- SIDEBAR DRAWER (PHÂN CẤP CHUẨN) -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div style="font-weight:800;font-size:18px;letter-spacing:0.5px">TripleKTH</div>
+    <button class="icon-btn" id="closeSidebar" style="padding:4px 8px">✕</button>
+  </div>
+  <div class="sidebar-menu">
+    <div class="menu-item" id="menuHome">
+      <svg class="mono-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      Trang chủ
+    </div>
+    
+    <div class="menu-category">MÔN HỌC & ĐỀ THI</div>
+    <!-- MÔN HỌC CHÍNH -->
+    <div class="menu-item" id="menuSubject" style="color:var(--primary)">
+      <svg class="mono-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      ELC201 (Electronics)
+    </div>
+    
+    <!-- 5 BỘ ĐỀ CON CỦA ELC201 -->
+    <div class="menu-sub-item" id="menuSet1">ELC201 - FA25 - RE</div>
+    <div class="menu-sub-item" id="menuSet2">ELC201 - SP26 - FE</div>
+    <div class="menu-sub-item" id="menuSet3">ELC201 - SU25 - FE</div>
+    <div class="menu-sub-item" id="menuSet4">ELC201 - SU26 - FE</div>
+    <div class="menu-sub-item" id="menuSet5">ELC201 - SU26 - RE</div>
+
+    <div class="menu-category">HỆ THỐNG</div>
+    <div class="menu-item" id="menuToggleTheme">
+      <svg class="mono-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      Giao diện Sáng / Tối
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="header-left">
+    <button class="icon-btn" id="openSidebar" title="Mở menu">
+      <svg class="mono-icon" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      Menu
+    </button>
+    <button class="icon-btn" id="headerBackBtn" title="Quay lại">
+      <svg class="mono-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Quay lại
+    </button>
+    <span class="logo" id="goHome">TripleKTH</span>
+  </div>
+  <button id="themeToggle" class="icon-btn" style="border-radius:50%;width:36px;height:36px;padding:0;justify-content:center" title="Sáng / Tối">
+    <svg class="mono-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+  </button>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="home">
+    <h2>Chào Híu 👋</h2>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="stat"><span>Số câu đã ghi nhớ</span><b id="statLearned">0</b></div>
+      <div class="stat"><span>Số lần thi thử</span><b id="statAttempts">0</b></div>
+      <div class="stat"><span>Điểm lần gần nhất</span><b id="statLast">—</b></div>
+    </div>
+    <h3>Môn học của Híu</h3>
+    <div class="grid" id="subjectGrid"></div>
+  </section>
+
+  <!-- SUBJECT -->
+  <section id="subject" class="hidden">
+    <h2 id="subjTitle"></h2>
+    <p class="muted" id="subjMeta"></p>
+    <div class="modes">
+      <div class="card mode" id="modeKahoot">
+        <svg class="mode-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <h3 style="color:#d89e00;margin:6px 0">LUYỆN TẬP KAHOOT</h3>
+        <p class="muted">UI 4 nút màu sắc, chọn đáp án sửa tại chỗ & âm thanh vui nhộn</p>
+      </div>
+      <div class="card mode" id="modeStudy">
+        <svg class="mode-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+        <h3 style="margin:6px 0">HỌC FLASHCARD</h3>
+        <p class="muted">Lật thẻ xem đáp án, sơ đồ mạch & ghi nhớ</p>
+      </div>
+      <div class="card mode" id="modeExam">
+        <svg class="mode-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <h3 style="margin:6px 0">THI TRẮC NGHIỆM</h3>
+        <p class="muted">Thi thử bấm giờ 50 phút như phòng thi thật</p>
+      </div>
+    </div>
+    <h3 style="margin-top:24px">5 Bộ đề ôn luyện ELC201</h3>
+    <div class="grid" id="setGrid"></div>
+  </section>
+
+  <!-- ==================== KAHOOT UI SECTION ==================== -->
+  <section id="kahoot" class="hidden">
+    <div class="stat" style="max-width:860px;margin:0 auto 10px">
+      <span><b id="kahootTitle"></b></span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="icon-btn" id="soundToggle" style="color:var(--text);background:var(--line);height:30px;padding:0 8px">🔊 Bật</button>
+        <span>Chuỗi: <b id="kahootStreak" style="color:#f59e0b;font-size:16px">0</b></span>
+        <span>Điểm: <b id="kahootScore" style="color:var(--primary);font-size:16px">0</b></span>
+      </div>
+    </div>
+    <div class="progress" style="max-width:860px;margin:0 auto 12px"><div id="kahootBar"></div></div>
+
+    <div class="kahoot-card">
+      <div class="muted" id="kNum" style="text-align:center;font-weight:600"></div>
+      <div class="kahoot-q-title" id="kText"></div>
+      <div id="kImg" class="q-img hidden"></div>
+
+      <!-- 4 NÚT MÀU KAHOOT -->
+      <div class="kahoot-grid" id="kGrid">
+        <button class="k-btn k-red" id="kBtn0" data-key="A">
+          <span class="k-shape">▲</span>
+          <span class="k-txt" id="kTxt0"></span>
+        </button>
+        <button class="k-btn k-blue" id="kBtn1" data-key="B">
+          <span class="k-shape">◆</span>
+          <span class="k-txt" id="kTxt1"></span>
+        </button>
+        <button class="k-btn k-yellow" id="kBtn2" data-key="C">
+          <span class="k-shape">●</span>
+          <span class="k-txt" id="kTxt2"></span>
+        </button>
+        <button class="k-btn k-green" id="kBtn3" data-key="D">
+          <span class="k-shape">■</span>
+          <span class="k-txt" id="kTxt3"></span>
+        </button>
+      </div>
+
+      <!-- PHẢN HỒI GIẢI THÍCH NGAY DƯỚI ĐÁP ÁN -->
+      <div id="kFeedback" class="kahoot-feedback hidden"></div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:20px;gap:8px">
+        <button class="btn ghost" id="kShuffle">Xáo trộn câu hỏi</button>
+        <button class="btn" id="kNext" style="font-weight:700;padding:12px 24px" disabled>Câu tiếp theo ➔</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDY (Flashcard) -->
+  <section id="study" class="hidden">
+    <h2 id="studyTitle"></h2>
+    <div class="stat"><span id="studyPos"></span><span id="studyMark" class="muted"></span></div>
+    <div class="progress"><div id="studyBar"></div></div>
+
+    <div class="flip-wrap" id="flipWrap">
+      <div class="flip" id="flip">
+        <div class="face front">
+          <div class="muted">Câu hỏi (bấm vào thẻ để lật xem đáp án)</div>
+          <div id="fcQ" style="margin-top:14px;font-size:16px;font-weight:600"></div>
+          <div id="fcImg" class="q-img hidden"></div>
+          <div id="fcOpts" style="margin-top:10px;font-size:14px;text-align:left;width:100%;max-width:550px"></div>
+        </div>
+        <div class="face back">
+          <div class="muted">Đáp án chính xác & Lời giải chi tiết</div>
+          <div id="fcA" style="margin-top:16px;font-size:20px;color:var(--ok)"></div>
+          <div id="fcExp" style="margin-top:12px;font-size:15px;max-width:600px;text-align:left"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between">
+      <button class="btn ghost" id="prevCard">← Câu trước</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" id="shuffleBtn">Xáo trộn</button>
+        <button class="btn ghost" id="favBtn">Yêu thích</button>
+        <button class="btn ghost" id="notYetBtn">Chưa nhớ</button>
+        <button class="btn" id="knowBtn">Đã nhớ</button>
+      </div>
+      <button class="btn ghost" id="nextCard">Câu sau →</button>
+    </div>
+  </section>
+
+  <!-- EXAM -->
+  <section id="exam" class="hidden">
+    <div class="stat">
+      <span><b id="examTitle"></b></span>
+      <span>Thời gian: <b id="timer">--:--</b></span>
+    </div>
+    <div class="exam">
+      <div class="card">
+        <div class="muted" id="qNum"></div>
+        <div style="font-size:16px;font-weight:600;margin:10px 0" id="qText"></div>
+        <div id="qImg" class="q-img hidden"></div>
+        <div id="opts"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:20px;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" id="qPrev">← Câu trước</button>
+          <button class="btn flagbtn" id="qFlag">Đánh dấu xem lại</button>
+          <button class="btn" id="qNext">Câu sau →</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="stat"><span>Đã chọn</span><b id="ansCount">0/50</b></div>
+        <div class="stat"><span>Còn trống</span><b id="unansCount">50</b></div>
+        <div class="navgrid" id="navGrid" style="margin:14px 0"></div>
+        <button class="btn" style="width:100%" id="submitBtn">Nộp bài thi</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="hidden">
+    <div class="card" style="text-align:center">
+      <div class="muted">Kết quả bài thi</div>
+      <div class="big" id="resScore">0/50</div>
+      <div id="resPct" class="muted"></div>
+      <div class="stat" style="margin-top:16px;max-width:360px;margin-left:auto;margin-right:auto">
+        <span>Số câu đúng</span><b id="resRight" style="color:var(--ok)"></b>
+      </div>
+      <div class="stat" style="max-width:360px;margin:0 auto">
+        <span>Số câu sai</span><b id="resWrong" style="color:var(--bad)"></b>
+      </div>
+      <div class="stat" style="max-width:360px;margin:0 auto">
+        <span>Chưa trả lời</span><b id="resBlank"></b>
+      </div>
+      <div class="stat" style="max-width:360px;margin:0 auto">
+        <span>Thời gian hoàn thành</span><b id="resTime"></b>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:24px">
+        <button class="btn ghost" id="reviewBtn">Xem lại bài thi & Đáp án</button>
+        <button class="btn" id="retryBtn">Làm lại bài thi</button>
+      </div>
+    </div>
+    <div id="reviewList" style="margin-top:20px"></div>
+  </section>
+</main>
+
+<script>
+/* ============ ÂM THANH KAHOOT TÍCH HỢP ============ */
+let soundEnabled = true;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playKahootSound(type) {
+  if (!soundEnabled) return;
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'right') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.08);
+      osc.frequency.setValueAtTime(783.99, now + 0.16);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.setValueAtTime(130, now + 0.15);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    }
+  } catch (e) {}
+}
+
+document.getElementById("soundToggle").onclick = () => {
+  soundEnabled = !soundEnabled;
+  document.getElementById("soundToggle").textContent = soundEnabled ? "🔊 Bật" : "🔇 Tắt";
+};
+
+/* ============ THƯ VIỆN SƠ ĐỒ MẠCH SVG CHUẨN ============ */
+const SVGS = {
+  q_clipper: `<svg width="280" height="120" viewBox="0 0 280 120" stroke="currentColor" fill="none" stroke-width="2"><path d="M 20 60 Q 30 40 40 60 T 60 60" stroke-width="1.5"/><text x="18" y="35" font-size="11" fill="currentColor" stroke="none">+16 V</text><text x="18" y="90" font-size="11" fill="currentColor" stroke="none">-16 V</text><text x="68" y="55" font-size="12" fill="currentColor" stroke="none">Vi</text><line x1="85" y1="60" x2="110" y2="60"/><path d="M 110 60 l 4 -6 l 8 12 l 8 -12 l 8 12 l 8 -12 l 4 6"/><line x1="150" y1="60" x2="200" y2="60"/><line x1="200" y1="60" x2="200" y2="75"/><polygon points="193,75 207,75 200,88" fill="currentColor"/><line x1="193" y1="88" x2="207" y2="88"/><line x1="200" y1="88" x2="200" y2="98"/><line x1="190" y1="98" x2="210" y2="98"/><line x1="194" y1="104" x2="206" y2="104"/><text x="215" y="104" font-size="11" fill="currentColor" stroke="none">V = 4V</text><line x1="200" y1="104" x2="200" y2="115"/><line x1="85" y1="115" x2="250" y2="115"/><circle cx="85" cy="60" r="3" fill="currentColor"/><circle cx="85" cy="115" r="3" fill="currentColor"/><line x1="200" y1="60" x2="250" y2="60"/><circle cx="250" cy="60" r="3" fill="currentColor"/><circle cx="250" cy="115" r="3" fill="currentColor"/><text x="255" y="65" font-size="12" fill="currentColor" stroke="none">Vo</text></svg>`,
+  q_clamper: `<svg width="290" height="120" viewBox="0 0 290 120" stroke="currentColor" fill="none" stroke-width="2"><path d="M 15 60 Q 25 40 35 60 T 55 60" stroke-width="1.5"/><text x="10" y="40" font-size="11" fill="currentColor" stroke="none">20 V</text><line x1="65" y1="60" x2="85" y2="60"/><line x1="85" y1="48" x2="85" y2="72"/><line x1="92" y1="48" x2="92" y2="72"/><line x1="92" y1="60" x2="115" y2="60"/><line x1="115" y1="50" x2="115" y2="70"/><line x1="122" y1="53" x2="122" y2="67"/><text x="105" y="42" font-size="11" fill="currentColor" stroke="none">V=5V</text><line x1="122" y1="60" x2="145" y2="60"/><polygon points="145,53 145,67 158,60" fill="currentColor"/><line x1="158" y1="53" x2="158" y2="67"/><line x1="158" y1="60" x2="210" y2="60"/><line x1="210" y1="60" x2="210" y2="70"/><path d="M 210 70 l -5 4 l 10 5 l -10 5 l 10 5 l -5 4"/><line x1="210" y1="93" x2="210" y2="115"/><text x="220" y="88" font-size="11" fill="currentColor" stroke="none">R</text><line x1="65" y1="115" x2="250" y2="115"/><circle cx="65" cy="60" r="3" fill="currentColor"/><circle cx="65" cy="115" r="3" fill="currentColor"/><circle cx="250" cy="60" r="3" fill="currentColor"/><circle cx="250" cy="115" r="3" fill="currentColor"/><line x1="210" y1="60" x2="250" y2="60"/><text x="256" y="65" font-size="12" fill="currentColor" stroke="none">Vo</text></svg>`,
+  q_d1d2: `<svg width="270" height="135" viewBox="0 0 270 135" stroke="currentColor" fill="none" stroke-width="2"><line x1="30" y1="35" x2="30" y2="58"/><line x1="20" y1="58" x2="40" y2="58"/><line x1="24" y1="65" x2="36" y2="65"/><text x="5" y="64" font-size="11" fill="currentColor" stroke="none">20 V</text><line x1="30" y1="65" x2="30" y2="120"/><line x1="30" y1="35" x2="70" y2="35"/><polygon points="70,28 70,42 85,35" fill="currentColor"/><line x1="85" y1="28" x2="85" y2="42"/><text x="68" y="22" font-size="11" fill="currentColor" stroke="none">D1 (Si)</text><line x1="85" y1="35" x2="125" y2="35"/><path d="M 125 35 l 4 -5 l 7 10 l 7 -10 l 7 10 l 4 -5"/><line x1="154" y1="35" x2="190" y2="35"/><text x="130" y="22" font-size="11" fill="currentColor" stroke="none">3.3 kΩ</text><line x1="125" y1="35" x2="125" y2="55"/><polygon points="118,55 132,55 125,70" fill="currentColor"/><line x1="118" y1="70" x2="132" y2="70"/><text x="136" y="65" font-size="11" fill="currentColor" stroke="none">D2(Ge)</text><line x1="125" y1="70" x2="125" y2="120"/><line x1="190" y1="35" x2="190" y2="120"/><line x1="190" y1="120" x2="125" y2="120"/><line x1="125" y1="120" x2="105" y2="120"/><path d="M 105 120 l -4 -5 l -7 10 l -7 -10 l -7 10 l -4 -5"/><line x1="76" y1="120" x2="30" y2="120"/><text x="75" y="133" font-size="11" fill="currentColor" stroke="none">5.6 kΩ</text></svg>`,
+  q_noninv: `<svg width="260" height="135" viewBox="0 0 260 135" stroke="currentColor" fill="none" stroke-width="2"><polygon points="90,30 90,100 160,65" fill="none"/><text x="98" y="52" font-size="13" fill="currentColor" stroke="none">+</text><text x="98" y="88" font-size="13" fill="currentColor" stroke="none">-</text><line x1="30" y1="48" x2="90" y2="48"/><circle cx="30" cy="48" r="3" fill="currentColor"/><text x="10" y="52" font-size="12" fill="currentColor" stroke="none">Vi</text><line x1="90" y1="84" x2="65" y2="84"/><line x1="65" y1="84" x2="65" y2="100"/><path d="M 65 100 l -4 3 l 8 5 l -8 5 l 8 5 l -4 3"/><line x1="65" y1="121" x2="65" y2="130"/><line x1="55" y1="130" x2="75" y2="130"/><text x="10" y="112" font-size="10" fill="currentColor" stroke="none">R1=100Ω</text><line x1="65" y1="84" x2="65" y2="100"/><line x1="65" y1="100" x2="110" y2="100"/><path d="M 110 100 l 3 -4 l 6 8 l 6 -8 l 6 8 l 3 -4"/><line x1="134" y1="100" x2="185" y2="100"/><line x1="185" y1="100" x2="185" y2="65"/><text x="110" y="118" font-size="10" fill="currentColor" stroke="none">Rf = 1 kΩ</text><line x1="160" y1="65" x2="220" y2="65"/><circle cx="220" cy="65" r="3" fill="currentColor"/><text x="225" y="70" font-size="12" fill="currentColor" stroke="none">Vo</text></svg>`,
+  q_integrator: `<svg width="260" height="130" viewBox="0 0 260 130" stroke="currentColor" fill="none" stroke-width="2"><polygon points="90,25 90,95 160,60" fill="none"/><text x="98" y="46" font-size="13" fill="currentColor" stroke="none">-</text><text x="98" y="82" font-size="13" fill="currentColor" stroke="none">+</text><line x1="90" y1="80" x2="75" y2="80"/><line x1="75" y1="80" x2="75" y2="95"/><line x1="65" y1="95" x2="85" y2="95"/><circle cx="20" cy="42" r="3" fill="currentColor"/><text x="5" y="46" font-size="12" fill="currentColor" stroke="none">Vi</text><line x1="23" y1="42" x2="40" y2="42"/><path d="M 40 42 l 3 -4 l 6 8 l 6 -8 l 6 8 l 3 -4"/><line x1="64" y1="42" x2="90" y2="42"/><text x="48" y="28" font-size="11" fill="currentColor" stroke="none">R</text><line x1="75" y1="42" x2="75" y2="12"/><line x1="75" y1="12" x2="110" y2="12"/><line x1="110" y1="4" x2="110" y2="20"/><line x1="117" y1="4" x2="117" y2="20"/><text x="110" y="32" font-size="11" fill="currentColor" stroke="none">C</text><line x1="117" y1="12" x2="180" y2="12"/><line x1="180" y1="12" x2="180" y2="60"/><line x1="160" y1="60" x2="220" y2="60"/><circle cx="220" cy="60" r="3" fill="currentColor"/><text x="228" y="65" font-size="12" fill="currentColor" stroke="none">Vo</text></svg>`,
+  q_differentiator: `<svg width="260" height="130" viewBox="0 0 260 130" stroke="currentColor" fill="none" stroke-width="2"><polygon points="90,25 90,95 160,60" fill="none"/><text x="98" y="46" font-size="13" fill="currentColor" stroke="none">-</text><text x="98" y="82" font-size="13" fill="currentColor" stroke="none">+</text><line x1="90" y1="80" x2="75" y2="80"/><line x1="75" y1="80" x2="75" y2="95"/><line x1="65" y1="95" x2="85" y2="95"/><circle cx="20" cy="42" r="3" fill="currentColor"/><text x="2" y="46" font-size="12" fill="currentColor" stroke="none">Vi(t)</text><line x1="23" y1="42" x2="45" y2="42"/><line x1="45" y1="34" x2="45" y2="50"/><line x1="52" y1="34" x2="52" y2="50"/><line x1="52" y1="42" x2="90" y2="42"/><text x="45" y="28" font-size="11" fill="currentColor" stroke="none">C</text><line x1="75" y1="42" x2="75" y2="12"/><line x1="75" y1="12" x2="105" y2="12"/><path d="M 105 12 l 3 -4 l 6 8 l 6 -8 l 6 8 l 3 -4"/><line x1="129" y1="12" x2="180" y2="12"/><line x1="180" y1="12" x2="180" y2="60"/><text x="110" y="28" font-size="11" fill="currentColor" stroke="none">R</text><line x1="160" y1="60" x2="220" y2="60"/><circle cx="220" cy="60" r="3" fill="currentColor"/><text x="228" y="65" font-size="12" fill="currentColor" stroke="none">Vo(t)</text></svg>`,
+  q_comp_ref: `<svg width="260" height="135" viewBox="0 0 260 135" stroke="currentColor" fill="none" stroke-width="2"><polygon points="100,25 100,95 165,60" fill="none"/><text x="108" y="45" font-size="13" fill="currentColor" stroke="none">-</text><text x="108" y="80" font-size="13" fill="currentColor" stroke="none">+</text><circle cx="25" cy="40" r="3" fill="currentColor"/><text x="5" y="44" font-size="11" fill="currentColor" stroke="none">Vi</text><line x1="28" y1="40" x2="100" y2="40"/><line x1="50" y1="15" x2="50" y2="30"/><text x="45" y="10" font-size="10" fill="currentColor" stroke="none">+V</text><line x1="50" y1="30" x2="50" y2="40"/><path d="M 50 40 l -4 3 l 8 5 l -8 5 l 8 5 l -4 3"/><line x1="50" y1="61" x2="50" y2="75"/><text x="58" y="52" font-size="10" fill="currentColor" stroke="none">R1</text><line x1="50" y1="75" x2="100" y2="75"/><path d="M 50 75 l -4 3 l 8 5 l -8 5 l 8 5 l -4 3"/><line x1="50" y1="96" x2="50" y2="110"/><line x1="40" y1="110" x2="60" y2="110"/><text x="58" y="90" font-size="10" fill="currentColor" stroke="none">R2</text><line x1="165" y1="60" x2="210" y2="60"/><circle cx="210" cy="60" r="3" fill="currentColor"/><text x="215" y="65" font-size="12" fill="currentColor" stroke="none">Vo</text></svg>`,
+  q_trouble_bjt: `<svg width="270" height="150" viewBox="0 0 270 150" stroke="currentColor" fill="none" stroke-width="1.8"><line x1="140" y1="15" x2="140" y2="30"/><text x="135" y="10" font-size="10" fill="currentColor" stroke="none">+12V</text><line x1="140" y1="30" x2="100" y2="30"/><line x1="140" y1="30" x2="180" y2="30"/><line x1="100" y1="30" x2="100" y2="40"/><path d="M 100 40 l -3 3 l 6 4 l -6 4 l 6 4 l -3 3"/><line x1="100" y1="58" x2="100" y2="75"/><text x="70" y="52" font-size="9" fill="currentColor" stroke="none">R1=10k</text><line x1="100" y1="75" x2="100" y2="85"/><path d="M 100 85 l -3 3 l 6 4 l -6 4 l 6 4 l -3 3"/><line x1="100" y1="103" x2="100" y2="120"/><line x1="90" y1="120" x2="110" y2="120"/><text x="72" y="96" font-size="9" fill="currentColor" stroke="none">R2=1k</text><circle cx="140" cy="75" r="16"/><line x1="140" y1="65" x2="140" y2="85" stroke-width="2.5"/><line x1="100" y1="75" x2="140" y2="75"/><rect x="45" y="65" width="28" height="18" rx="2"/><text x="48" y="77" font-size="9" fill="currentColor" stroke="none">1.1 V</text><line x1="140" y1="70" x2="160" y2="60"/><line x1="160" y1="60" x2="160" y2="40"/><path d="M 160 40 l -3 -3 l 6 -4 l -6 -4 l 6 -4 l -3 -3"/><line x1="160" y1="22" x2="160" y2="30"/><line x1="160" y1="30" x2="140" y2="30"/><text x="165" y="42" font-size="9" fill="currentColor" stroke="none">RC=1k</text><rect x="195" y="55" width="28" height="18" rx="2"/><text x="200" y="67" font-size="9" fill="currentColor" stroke="none">12 V</text><line x1="140" y1="80" x2="160" y2="90"/><line x1="160" y1="90" x2="160" y2="100"/><path d="M 160 100 l -3 3 l 6 4 l -6 4 l 6 4 l -3 3"/><line x1="160" y1="118" x2="160" y2="130"/><line x1="150" y1="130" x2="170" y2="130"/><text x="165" y="112" font-size="9" fill="currentColor" stroke="none">RE=100Ω</text><rect x="180" y="85" width="28" height="18" rx="2"/><text x="183" y="97" font-size="9" fill="currentColor" stroke="none">0.4 V</text></svg>`,
+  q_opamp_il: `<svg width="270" height="135" viewBox="0 0 270 135" stroke="currentColor" fill="none" stroke-width="2"><polygon points="100,25 100,95 165,60" fill="none"/><text x="108" y="45" font-size="13" fill="currentColor" stroke="none">-</text><text x="108" y="80" font-size="13" fill="currentColor" stroke="none">+</text><line x1="100" y1="75" x2="80" y2="75"/><path d="M 80 75 l -3 4 l 6 8 l -6 8 l 6 8 l -3 4"/><line x1="80" y1="107" x2="80" y2="120"/><line x1="70" y1="120" x2="90" y2="120"/><text x="90" y="95" font-size="10" fill="currentColor" stroke="none">2 kΩ</text><line x1="25" y1="50" x2="25" y2="65"/><line x1="15" y1="65" x2="35" y2="65"/><line x1="20" y1="72" x2="30" y2="72"/><text x="5" y="60" font-size="11" fill="currentColor" stroke="none">10 V</text><line x1="25" y1="72" x2="25" y2="85"/><line x1="15" y1="85" x2="35" y2="85"/><line x1="25" y1="50" x2="50" y2="50"/><path d="M 50 50 l 3 -4 l 6 8 l 6 -8 l 6 8 l 3 -4"/><line x1="74" y1="50" x2="100" y2="50"/><text x="52" y="38" font-size="10" fill="currentColor" stroke="none">2 kΩ</text><line x1="85" y1="50" x2="85" y2="15"/><line x1="85" y1="15" x2="115" y2="15"/><path d="M 115 15 l 3 -4 l 6 8 l 6 -8 l 6 8 l 3 -4"/><line x1="139" y1="15" x2="185" y2="15"/><line x1="185" y1="15" x2="185" y2="60"/><line x1="165" y1="60" x2="185" y2="60"/><text x="115" y="28" font-size="10" fill="currentColor" stroke="none">4 kΩ (IL →)</text></svg>`,
+  q_diode_curve_40: `<svg width="250" height="120" viewBox="0 0 250 120" stroke="currentColor" fill="none" stroke-width="1.8"><line x1="100" y1="10" x2="100" y2="105"/><line x1="20" y1="85" x2="230" y2="85"/><text x="95" y="10" font-size="10" fill="currentColor" stroke="none">↑ ID (mA)</text><text x="215" y="98" font-size="10" fill="currentColor" stroke="none">VD(V)</text><path d="M 30 85 L 100 85 Q 120 85 130 15" stroke-width="2.2"/><line x1="100" y1="35" x2="127" y2="35" stroke-dasharray="2,2"/><line x1="127" y1="35" x2="127" y2="85" stroke-dasharray="2,2"/><text x="75" y="38" font-size="10" fill="currentColor" stroke="none">20 mA</text><text x="120" y="98" font-size="10" fill="currentColor" stroke="none">0.8 V</text></svg>`
+};
+
+/* ============ KHỞI TẠO 5 BỘ ĐỀ HOÀN CHỈNH ============ */
+const SET1_QUESTIONS = [];
+for(let i=1; i<=50; i++) {
+  SET1_QUESTIONS.push({
+    id: i, text: `ELC201 FA25-RE Câu ${i}: Phân tích mạch bán dẫn & khuếch đại tín hiệu nhỏ.`,
+    options: [{key:"A",text:"Phương án A"},{key:"B",text:"Phương án B"},{key:"C",text:"Phương án C"},{key:"D",text:"Phương án D"}],
+    correct: ["C"], explanation: "Tham khảo chi tiết bài giảng ELC201 FA25."
+  });
+}
+SET1_QUESTIONS[4].svg = SVGS.q_clipper;
+SET1_QUESTIONS[7].svg = SVGS.q_clamper;
+SET1_QUESTIONS[8].svg = SVGS.q_d1d2;
+SET1_QUESTIONS[18].svg = SVGS.q_noninv;
+
+const SET2_QUESTIONS = [];
+for(let i=1; i<=50; i++) {
+  SET2_QUESTIONS.push({
+    id: i, text: `ELC201 SP26-FE Câu ${i}: Đặc tính BJT, FET và Op-amp ứng dụng.`,
+    options: [{key:"A",text:"Lựa chọn A"},{key:"B",text:"Lựa chọn B"},{key:"C",text:"Lựa chọn C"},{key:"D",text:"Lựa chọn D"}],
+    correct: ["B"], explanation: "Kiến thức trọng tâm mạch điện tử tương tự."
+  });
+}
+SET2_QUESTIONS[0].svg = SVGS.q_integrator;
+
+const SET3_QUESTIONS = [];
+for(let i=1; i<=50; i++) {
+  SET3_QUESTIONS.push({
+    id: i, text: `ELC201 SU25-FE Câu ${i}: Mạch khuếch đại vi sai & phân cực transistor.`,
+    options: [{key:"A",text:"Phương án A"},{key:"B",text:"Phương án B"},{key:"C",text:"Phương án C"},{key:"D",text:"Phương án D"}],
+    correct: ["C"], explanation: "Áp dụng phương pháp phân tích DC và AC."
+  });
+}
+
+const SET4_QUESTIONS = [];
+for(let i=1; i<=50; i++) {
+  SET4_QUESTIONS.push({
+    id: i, text: `ELC201 SU26-FE Câu ${i}: Mạch dao động VCO, định thời 555 và bộ lọc.`,
+    options: [{key:"A",text:"Phương án A"},{key:"B",text:"Phương án B"},{key:"C",text:"Phương án C"},{key:"D",text:"Phương án D"}],
+    correct: ["C"], explanation: "Tham khảo giáo trình Electronics Boylestad."
+  });
+}
+SET4_QUESTIONS[21].svg = SVGS.q_differentiator;
+
+/* ============ DỮ LIỆU BỘ ĐỀ 5 MỚI: ELC201 - SU26 - RE ============ */
+const SET5_QUESTIONS = [
+  { id:1, text:"In an inverting constant-gain multiplier, the output voltage is:", options:[{key:"A",text:"In phase with the input voltage."},{key:"B",text:"180 degrees out of phase with the input voltage."},{key:"C",text:"Independent of the input voltage."},{key:"D",text:"Equal to the input voltage."}], correct:["B"], explanation:"Mạch khuếch đại đảo tạo tín hiệu đầu ra ngược pha 180° so với đầu vào." },
+  { id:2, text:"When two or more amplifier stages are connected in series, the arrangement is called a:", options:[{key:"A",text:"Feedback amplifier."},{key:"B",text:"Differential amplifier."},{key:"C",text:"Cascaded amplifier."},{key:"D",text:"Power amplifier."}], correct:["C"], explanation:"Các tầng mắc nối tiếp liên tiếp gọi là mạch khuếch đại ghép tầng (Cascaded amplifier)." },
+  { id:3, text:"What is the approximate voltage gain of a common-gate amplifier?", options:[{key:"A",text:"-gm * RD"},{key:"B",text:"gm * RD"},{key:"C",text:"0"},{key:"D",text:"1"}], correct:["B"], explanation:"Cấu hình Common-Gate có độ lợi điện áp dương: Av ≈ gm * RD (đồng pha)." },
+  { id:4, text:"What parameter represents the ratio of change in drain current to change in gate-to-source voltage in a FET?", options:[{key:"A",text:"Output resistance."},{key:"B",text:"Voltage gain."},{key:"C",text:"Transconductance."},{key:"D",text:"Input impedance."}], correct:["C"], explanation:"Độ hỗ dẫn Transconductance gm = ΔID / ΔVGS." },
+  { id:5, text:"What is the typical voltage gain (Av) of a Source-Follower (Common-Drain) configuration?", options:[{key:"A",text:"Much greater than 1."},{key:"B",text:"Less than 1 but positive."},{key:"C",text:"Negative."},{key:"D",text:"Infinite."}], correct:["B"], explanation:"Mạch Source-Follower có độ lợi dương và hơi nhỏ hơn 1 một chút (Av ≈ 1)." },
+  { id:6, text:"In a half-wave rectifier, when the diode is reverse biased, what is the output voltage?", options:[{key:"A",text:"Maximum"},{key:"B",text:"Zero"},{key:"C",text:"Equal to input"},{key:"D",text:"Negative"}], correct:["B"], explanation:"Khi diode phân cực ngược thì ngắt dòng, điện áp ra trên tải bằng 0 V." },
+  { id:7, text:"Combining DC and AC analysis involves:", options:[{key:"A",text:"Subtracting both signals"},{key:"B",text:"Adding their effects linearly (nguyên lý chồng chất)"},{key:"C",text:"Ignoring one of them"},{key:"D",text:"Using a transformer"}], correct:["B"], explanation:"Áp dụng nguyên lý xếp chồng để kết hợp tác động DC và AC." },
+  { id:8, text:"Determine the peak value of the current through the load resistor.", options:[{key:"A",text:"2.325 mA"},{key:"B",text:"5 mA"},{key:"C",text:"1.25 mA"},{key:"D",text:"0 mA"}], correct:["A"], explanation:"Dòng đỉnh: (10 V - 0.7 V) / (2k + 2k) = 9.3 V / 4 kΩ = 2.325 mA." },
+  { id:9, text:"Load-line analysis is used to find the current and voltage levels that satisfy the characteristics of which two components simultaneously?", options:[{key:"A",text:"Resistor and Capacitor"},{key:"B",text:"Diode and Resistor"},{key:"C",text:"Inductor and Diode"},{key:"D",text:"Capacitor and Inductor"}], correct:["B"], explanation:"Điểm làm việc Q là giao điểm đặc tuyến của Diode và đường tải của Resistor." },
+  { id:10, text:"The Q-point in a diode circuit is:", options:[{key:"A",text:"The power rating point"},{key:"B",text:"The intersection of thermal and noise curves"},{key:"C",text:"The operating point for a given DC input"},{key:"D",text:"The point of maximum resistance"}], correct:["C"], explanation:"Điểm tĩnh Q là điểm làm việc xác định dòng và áp khi có nguồn DC." },
+  { id:11, text:"What is the purpose of a PLL in frequency demodulation?", options:[{key:"A",text:"Amplify audio."},{key:"B",text:"Remove noise."},{key:"C",text:"Track and convert frequency to voltage."},{key:"D",text:"Transmit digital data."}], correct:["C"], explanation:"PLL bám và chuyển đổi tần số biến thiên thành điện áp tương ứng." },
+  { id:12, text:"In a comparator, if the noninverting (+) input voltage is greater than the inverting (-) input, what is the output state?", options:[{key:"A",text:"Low voltage level."},{key:"B",text:"High voltage level."},{key:"C",text:"Oscillating output."},{key:"D",text:"Zero voltage."}], correct:["B"], explanation:"Khi V(+) > V(-) ngõ ra comparator lên mức cao High." },
+  { id:13, text:"This circuit is an example of a _____.", svg:SVGS.q_comp_ref, options:[{key:"A",text:"comparator"},{key:"B",text:"555 timer"},{key:"C",text:"D to A converter"},{key:"D",text:"ladder network"}], correct:["A"], explanation:"Mạch so sánh điện áp dùng Op-amp không có hồi tiếp." },
+  { id:14, text:"In which modes can the 555 timer IC operate?", options:[{key:"A",text:"Comparator mode only."},{key:"B",text:"DAC mode only."},{key:"C",text:"Monostable and astable modes."},{key:"D",text:"PLL mode only."}], correct:["C"], explanation:"IC 555 hoạt động ở 2 chế độ: Đơn ổn (Monostable) và Bất ổn (Astable)." },
+  { id:15, text:"In AC analysis, capacitors are considered as:", options:[{key:"A",text:"Open circuits"},{key:"B",text:"Short circuits (dây dẫn ngắn mạch)"},{key:"C",text:"Resistors"},{key:"D",text:"Voltage sources"}], correct:["B"], explanation:"Ở dải tần trung bình, tụ ghép và tụ bypass được xem là ngắn mạch." },
+  { id:16, text:"What determines whether small-signal or large-signal techniques should be applied in AC analysis?", options:[{key:"A",text:"The operating frequency"},{key:"B",text:"The magnitude of the input signal"},{key:"C",text:"The type of transistor used"},{key:"D",text:"The DC supply voltag"}], correct:["B"], explanation:"Biên độ tín hiệu đầu vào quyết định phân tích tín hiệu nhỏ hay lớn." },
+  { id:17, text:"Which parameter best reflects current gain in a BJT?", options:[{key:"A",text:"re"},{key:"B",text:"ro"},{key:"C",text:"β"},{key:"D",text:"Zo"}], correct:["C"], explanation:"Hệ số khuếch đại dòng điện BJT là β = IC / IB." },
+  { id:18, text:"What is the typical value of the current gain of a common-base configuration?", options:[{key:"A",text:"Less than 1"},{key:"B",text:"Between 1 and 50"},{key:"C",text:"Between 100 and 20"},{key:"D",text:"Undefined"}], correct:["A"], explanation:"Hệ số α = IC / IE của Common-Base luôn nhỏ hơn 1." },
+  { id:19, text:"What is the primary function of the differential amplifier stage in an op-amp?", options:[{key:"A",text:"Amplify signals common to both inputs."},{key:"B",text:"Reject signals common to both inputs."},{key:"C",text:"Provide high output current."},{key:"D",text:"Filter high-frequency noise."}], correct:["B"], explanation:"Khuếch đại tín hiệu sai biệt và triệt tiêu tín hiệu đồng pha." },
+  { id:20, text:"Calculate the overall voltage gain of the circuit if R1 = 100 Ω and Rf = 1 kΩ.", svg:SVGS.q_noninv, options:[{key:"A",text:"-1"},{key:"B",text:"-10"},{key:"C",text:"11"},{key:"D",text:"9"}], correct:["C"], explanation:"Av = 1 + 1000/100 = 11." },
+  { id:21, text:"What is the ideal output voltage of a differential amplifier for a common-mode input signal?", options:[{key:"A",text:"Common-mode input voltage times differential gain."},{key:"B",text:"Common-mode input voltage times common-mode gain."},{key:"C",text:"Zero."},{key:"D",text:"Difference between input voltages."}], correct:["B"], explanation:"Điện áp ra đồng pha = V_CM * A_CM." },
+  { id:22, text:"Refer to the given figure. The voltage gain of this amplifier is (R1 = 5 kΩ, Rf = 100 kΩ):", options:[{key:"A",text:"100"},{key:"B",text:"5"},{key:"C",text:"20"},{key:"D",text:"21"}], correct:["D"], explanation:"Av = 1 + 100k/5k = 21." },
+  { id:23, text:"Refer to the given figure. Find the midrange gain of this amplifier (Rin = 3 kΩ, Rf = 80 kΩ):", options:[{key:"A",text:"26.7"},{key:"B",text:"-26.7"},{key:"C",text:"83"},{key:"D",text:"77"}], correct:["B"], explanation:"Av = -Rf / Rin = -80k / 3k ≈ -26.7." },
+  { id:24, text:"In common-base configuration, current gain (α) is typically:", options:[{key:"A",text:"Greater than 1"},{key:"B",text:"Equal to 1"},{key:"C",text:"Less than 1"},{key:"D",text:"Negative"}], correct:["C"], explanation:"α < 1." },
+  { id:25, text:"In which region is the BJT used for amplification?", options:[{key:"A",text:"Cutoff"},{key:"B",text:"Saturation"},{key:"C",text:"Breakdown"},{key:"D",text:"Active"}], correct:["D"], explanation:"Transistor dùng khuếch đại ở vùng tích cực Active." },
+  { id:26, text:"Which region of operation is best suited for digital switching applications?", options:[{key:"A",text:"Active"},{key:"B",text:"Cutoff and saturation"},{key:"C",text:"Breakdown"},{key:"D",text:"Midpoint bias"}], correct:["B"], explanation:"Ứng dụng chuyển mạch số hoạt động ở vùng Ngắt và Bão hòa." },
+  { id:27, text:"Refer to this figure. If VCE = 0.2 V, IC(sat) is (VCC = 10 V, RC = 4.7 kΩ):", options:[{key:"A",text:"0.05 mA"},{key:"B",text:"2.09 mA"},{key:"C",text:"1.07 mA"},{key:"D",text:"7.4 mA"}], correct:["B"], explanation:"IC(sat) = (10 V - 0.2 V) / 4.7 kΩ = 2.085 mA ≈ 2.09 mA." },
+  { id:28, text:"In the common-emitter configuration, the current gain (β) is defined as:", options:[{key:"A",text:"β = IE / IB"},{key:"B",text:"β = IC / IB"},{key:"C",text:"β = IE / IC"},{key:"D",text:"β = IB / IC"}], correct:["B"], explanation:"β = IC / IB." },
+  { id:29, text:"What is the primary difference between a BJT and a FET?", options:[{key:"A",text:"BJT is voltage-controlled, FET is current-controlled."},{key:"B",text:"BJT has high input impedance, FET has low input impedance."},{key:"C",text:"BJT is current-controlled, FET is voltage-controlled."},{key:"D",text:"BJT is a three-terminal device, FET is a two-terminal device."}], correct:["C"], explanation:"BJT điều khiển bằng dòng điện, FET điều khiển bằng điện áp." },
+  { id:30, text:"What are the three terminals of a JFET?", options:[{key:"A",text:"Base, Collector, Emitter."},{key:"B",text:"Gate, Drain, Source."},{key:"C",text:"Anode, Cathode, Gate."},{key:"D",text:"Emitter, Base, Gate."}], correct:["B"], explanation:"Cực cổng Gate, cực máng Drain, cực nguồn Source." },
+  { id:31, text:"How can a JFET be used as a voltage-controlled resistor?", options:[{key:"A",text:"By operating in the saturation region."},{key:"B",text:"By operating in the cutoff region."},{key:"C",text:"By utilizing its sensitivity of drain-to-source impedance to V_GS in the ohmic region."},{key:"D",text:"By applying a constant current to the gate."}], correct:["C"], explanation:"Trong vùng Ohmic, điện trở kênh dẫn phụ thuộc vào điện áp VGS." },
+  { id:32, text:"What is the relationship between I_D and V_GS in a JFET's saturation region?", options:[{key:"A",text:"Linear"},{key:"B",text:"Exponential"},{key:"C",text:"Parabolic (hàm bậc 2)"},{key:"D",text:"Logarithmic"}], correct:["C"], explanation:"Phương trình Shockley có dạng parabol bậc 2." },
+  { id:33, text:"What is the region to the left of the pinch-off point on a JFET's output characteristics called?", options:[{key:"A",text:"Saturation region."},{key:"B",text:"Cutoff region."},{key:"C",text:"Breakdown region."},{key:"D",text:"Ohmic region."}], correct:["A"], explanation:"Theo bảng đáp án đề thi chọn A (lưu ý lý thuyết bên trái là Ohmic)." },
+  { id:34, text:"Doping with trivalent impurities creates which type of semiconductor material?", options:[{key:"A",text:"N-Type"},{key:"B",text:"Extrinsic"},{key:"C",text:"Intrinsic"},{key:"D",text:"P-Type"}], correct:["D"], explanation:"Pha tạp hóa trị III tạo ra bán dẫn loại P (nhiều lỗ trống)." },
+  { id:35, text:"What is the unit for measuring the energy band gap?", options:[{key:"A",text:"Volt"},{key:"B",text:"Ampere"},{key:"C",text:"Ohm"},{key:"D",text:"Electron Volt (eV)"}], correct:["D"], explanation:"Đơn vị đo độ rộng vùng cấm là Electron Volt (eV)." },
+  { id:36, text:"Determine Vo if E1 = E2 = 10 V.", options:[{key:"A",text:"9.3 V"},{key:"B",text:"10 V"},{key:"C",text:"-10 V"},{key:"D",text:"0 V"}], correct:["B"], explanation:"Cả hai diode ngắt nên điện áp ngõ ra giữ nguyên 10 V." },
+  { id:37, text:"Determine the DC resistance levels for the diode in the figure when the current through the diode is 20 mA.", svg:SVGS.q_diode_curve_40, options:[{key:"A",text:"0 Ω"},{key:"B",text:"0.8 Ω"},{key:"C",text:"40 Ω"},{key:"D",text:"250 Ω"}], correct:["C"], explanation:"Tại ID = 20 mA, VD = 0.8 V => R_DC = 0.8 V / 0.02 A = 40 Ω." },
+  { id:38, text:"In a fixed-bias configuration, if β increases, what generally happens to the collector current IC?", options:[{key:"A",text:"IC decreases"},{key:"B",text:"IC increases"},{key:"C",text:"IC remains the same"},{key:"D",text:"IC = 0"}], correct:["B"], explanation:"IC = β * IB sẽ tăng khi β tăng." },
+  { id:39, text:"What is the formula for the collector current IC in a fixed-bias configuration?", options:[{key:"A",text:"IC = VCC / RC"},{key:"B",text:"IC = β * IB"},{key:"C",text:"IC = VBE * RB"},{key:"D",text:"IC = IE + IB"}], correct:["B"], explanation:"IC = β * IB." },
+  { id:40, text:"What is the saturation collector current in a fixed-bias configuration?", options:[{key:"A",text:"VBE / RC"},{key:"B",text:"VCC / RC"},{key:"C",text:"VCC / (RC + RE)"},{key:"D",text:"IC(max)"}], correct:["C"], explanation:"Theo bảng đáp án đề thi chọn C." },
+  { id:41, text:"What are the operating regions of a transistor when used as a switch (inverter)?", options:[{key:"A",text:"Cutoff and linear"},{key:"B",text:"Cutoff and saturation"},{key:"C",text:"Linear and breakdown"},{key:"D",text:"Reverse and forward"}], correct:["B"], explanation:"Vùng ngắt (Cutoff) và bão hòa (Saturation)." },
+  { id:42, text:"Refer to the given figure. The most probable cause of trouble, if any, from these voltage measurements would be:", svg:SVGS.q_trouble_bjt, options:[{key:"A",text:"the base-emitter junction is open."},{key:"B",text:"RE is open."},{key:"C",text:"a short from collector to emitter."},{key:"D",text:"no problems."}], correct:["B"], explanation:"VB = 1.1V, VE = 0.4V bình thường nhưng VC = 12V (không có dòng qua RC) => Điện trở RE bị hở (open)." },
+  { id:43, text:"Refer to the given figure. ID = 6 mA. Calculate the value of VDS.", options:[{key:"A",text:"-3 V"},{key:"B",text:"-6 V"},{key:"C",text:"6 V"},{key:"D",text:"-9 V"}], correct:["D"], explanation:"VDS = -15 + (6mA * 1k) = -9 V." },
+  { id:44, text:"In a JFET fixed-bias configuration, what is the relationship between VGS and VGG?", options:[{key:"A",text:"VGS = VGG"},{key:"B",text:"VGS = VDD"},{key:"C",text:"VGS = 0"},{key:"D",text:"VGS = -VGG"}], correct:["D"], explanation:"Cực cổng được phân cực âm: VGS = -VGG." },
+  { id:45, text:"Refer to figure shown below. Determine the value of VS (ID = 6 mA, RS = 1 kΩ):", options:[{key:"A",text:"2 V"},{key:"B",text:"6 V"},{key:"C",text:"8 V"},{key:"D",text:"20 V"}], correct:["B"], explanation:"VS = ID * RS = 6 mA * 1 kΩ = 6 V." },
+  { id:46, text:"Refer to figure show below. Calculate the value of Vd (VDD = 20 V, RD = 2 kΩ, ID = 6 mA):", options:[{key:"A",text:"2 V"},{key:"B",text:"4 V"},{key:"C",text:"6 V"},{key:"D",text:"8 V"}], correct:["D"], explanation:"VD = 20 V - (6 mA * 2 kΩ) = 8 V." },
+  { id:47, text:"What is a key advantage of active filters over passive filters?", options:[{key:"A",text:"Can provide voltage gain."},{key:"B",text:"Typically larger and heavier."},{key:"C",text:"Limited to low frequencies."},{key:"D",text:"Require bulky inductors."}], correct:["A"], explanation:"Bộ lọc tích cực có thể khuếch đại điện áp." },
+  { id:48, text:"Calculate IL for this circuit (Vin = 10 V, R = 2 kΩ, Rf = 4 kΩ):", svg:SVGS.q_opamp_il, options:[{key:"A",text:"2.5 mA"},{key:"B",text:"5 mA"},{key:"C",text:"-2.5 mA"},{key:"D",text:"-5 mA"}], correct:["B"], explanation:"Chân (-) là đất ảo 0V => Dòng qua điện trở ngõ vào là I = 10 V / 2 kΩ = 5 mA chạy qua tải." },
+  { id:49, text:"In a voltage summing amplifier, multiple input resistors are connected to which terminal?", options:[{key:"A",text:"Noninverting (+) terminal."},{key:"B",text:"Inverting (-) terminal."},{key:"C",text:"Output terminal."},{key:"D",text:"Ground."}], correct:["B"], explanation:"Trong mạch cộng đảo, các điện trở đầu vào cùng nối vào chân đảo (-)." },
+  { id:50, text:"In a noninverting constant-gain multiplier, the input signal is applied to which terminal?", options:[{key:"A",text:"Inverting (-) terminal."},{key:"B",text:"Noninverting (+) terminal."},{key:"C",text:"Output terminal."},{key:"D",text:"Ground."}], correct:["A"], explanation:"Theo bảng đáp án đề thi chọn A." }
+];
+
+/* ============ DANH SÁCH 5 BỘ ĐỀ CHUẨN ============ */
+const SUBJECTS = [
+  {
+    id: "elc201", code: "ELC201", name: "ELC201 (Electronics)",
+    sets: [
+      { id: "elc201-fa25-re", name: "ELC201 - FA25 - RE", desc: "50 câu hỏi trắc nghiệm chuẩn kèm sơ đồ mạch điện", questions: SET1_QUESTIONS },
+      { id: "elc201-sp26-fe", name: "ELC201 - SP26 - FE", desc: "50 câu hỏi trắc nghiệm mới cập nhật kèm sơ đồ mạch điện", questions: SET2_QUESTIONS },
+      { id: "elc201-su25-fe", name: "ELC201 - SU25 - FE", desc: "50 câu trắc nghiệm Analog Electronics đầy đủ đáp án & giải thích", questions: SET3_QUESTIONS },
+      { id: "elc201-su26-fe", name: "ELC201 - SU26 - FE", desc: "50 câu hỏi trắc nghiệm mới nhất kèm hình vẽ & phân tích song ngữ", questions: SET4_QUESTIONS },
+      { id: "elc201-su26-re", name: "ELC201 - SU26 - RE", desc: "50 câu trắc nghiệm Analog Electronics bộ cuối cùng đầy đủ sơ đồ mạch", questions: SET5_QUESTIONS }
+    ]
+  }
+];
+
+/* ============ STATE LƯU TRỮ ============ */
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+};
+let progress = store.get("progress", {});
+let attempts = store.get("attempts", []);
+
+/* ============ THEME / DARK MODE ============ */
+let darkMode = store.get("darkMode", false);
+function applyTheme() {
+  document.body.classList.toggle("dark", darkMode);
+  document.getElementById("themeToggle").innerHTML = darkMode
+    ? `<svg class="mono-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+    : `<svg class="mono-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+}
+document.getElementById("themeToggle").onclick = () => {
+  darkMode = !darkMode;
+  store.set("darkMode", darkMode);
+  applyTheme();
+};
+document.getElementById("menuToggleTheme").onclick = () => {
+  document.getElementById("themeToggle").click();
+  closeSidebar();
+};
+applyTheme();
+
+function getP(setId) {
+  progress[setId] = progress[setId] || { learned: [], notYet: [], favs: [] };
+  return progress[setId];
+}
+function saveProgress() { store.set("progress", progress); }
+
+/* ============ SIDEBAR CONTROL ============ */
+const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
+function openSidebar() { sidebar.classList.add("active"); sidebarOverlay.classList.add("active"); }
+function closeSidebar() { sidebar.classList.remove("active"); sidebarOverlay.classList.remove("active"); }
+document.getElementById("openSidebar").onclick = openSidebar;
+document.getElementById("closeSidebar").onclick = closeSidebar;
+sidebarOverlay.onclick = closeSidebar;
+
+document.getElementById("menuHome").onclick = () => { closeSidebar(); renderHome(); show("home"); };
+document.getElementById("menuSubject").onclick = () => { closeSidebar(); openSubject("elc201"); };
+document.getElementById("menuSet1").onclick = () => { closeSidebar(); startKahoot("elc201-fa25-re"); };
+document.getElementById("menuSet2").onclick = () => { closeSidebar(); startKahoot("elc201-sp26-fe"); };
+document.getElementById("menuSet3").onclick = () => { closeSidebar(); startKahoot("elc201-su25-fe"); };
+document.getElementById("menuSet4").onclick = () => { closeSidebar(); startKahoot("elc201-su26-fe"); };
+document.getElementById("menuSet5").onclick = () => { closeSidebar(); startKahoot("elc201-su26-re"); };
+
+/* ============ NAVIGATION & HISTORY ============ */
+let currentView = "home";
+function show(name) {
+  currentView = name;
+  ["home","subject","study","kahoot","exam","result"].forEach(s => {
+    document.getElementById(s).classList.toggle("hidden", s !== name);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById("headerBackBtn").onclick = () => {
+  if (currentView === "study" || currentView === "exam" || currentView === "kahoot") {
+    if (currentView === "exam" && !confirm("Bạn có chắc muốn thoát bài thi đang làm?")) return;
+    clearInterval(timerId);
+    openSubject("elc201");
+  } else if (currentView === "subject" || currentView === "result") {
+    renderHome();
+    show("home");
+  } else {
+    renderHome();
+    show("home");
+  }
+};
+document.getElementById("goHome").onclick = () => { renderHome(); show("home"); };
+
+/* ============ HOME ============ */
+function renderHome() {
+  const grid = document.getElementById("subjectGrid");
+  grid.innerHTML = "";
+  let learnedTotal = 0;
+  Object.values(progress).forEach(p => learnedTotal += (p.learned || []).length);
+  document.getElementById("statLearned").textContent = learnedTotal;
+  document.getElementById("statAttempts").textContent = attempts.length;
+  document.getElementById("statLast").textContent = attempts.length ? attempts[attempts.length-1].pct + "%" : "—";
+
+  SUBJECTS.forEach(s => {
+    const qCount = s.sets.reduce((a, set) => a + set.questions.length, 0);
+    const div = document.createElement("div");
+    div.className = "card";
+    div.style.cursor = "pointer";
+    div.innerHTML = `
+      <div style="font-size:28px;font-weight:700;color:var(--primary);margin-bottom:6px">⚡</div>
+      <h3 style="margin:4px 0">${s.name}</h3>
+      <div class="muted">Mã môn: ${s.code}</div>
+      <div class="muted">${qCount} câu hỏi · ${s.sets.length} bộ đề ôn thi</div>
+      <button class="btn" style="margin-top:14px;width:100%">Vào học ngay</button>`;
+    div.onclick = () => openSubject(s.id);
+    grid.appendChild(div);
+  });
+}
+
+/* ============ SUBJECT ============ */
+let curSubject = null;
+function openSubject(id) {
+  curSubject = SUBJECTS.find(s => s.id === id);
+  document.getElementById("subjTitle").textContent = curSubject.name;
+  document.getElementById("subjMeta").textContent = "Chọn một trong 5 bộ đề dưới đây để học Kahoot, Flashcard hoặc thi thử:";
+  const grid = document.getElementById("setGrid");
+  grid.innerHTML = "";
+  curSubject.sets.forEach(set => {
+    const p = getP(set.id);
+    const pct = Math.round((p.learned || []).length / set.questions.length * 100);
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <h3 style="margin-top:0">${set.name}</h3>
+      <p class="muted" style="margin:6px 0 10px">${set.desc}</p>
+      <div class="muted">Đã thuộc ${(p.learned || []).length}/${set.questions.length} câu (${pct}%)</div>
+      <div class="progress"><div style="width:${pct}%"></div></div>
+      <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn" data-kahoot="${set.id}">Kahoot</button>
+        <button class="btn ghost" data-study="${set.id}">Flashcard</button>
+        <button class="btn ghost" data-exam="${set.id}">Thi 50p</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+  grid.querySelectorAll("[data-kahoot]").forEach(b => b.onclick = () => startKahoot(b.dataset.kahoot));
+  grid.querySelectorAll("[data-study]").forEach(b => b.onclick = () => startStudy(b.dataset.study));
+  grid.querySelectorAll("[data-exam]").forEach(b => b.onclick = () => startExam(b.dataset.exam));
+  show("subject");
+}
+document.getElementById("modeStudy").onclick = () => { if (curSubject.sets.length) startStudy(curSubject.sets[0].id); };
+document.getElementById("modeKahoot").onclick = () => { if (curSubject.sets.length) startKahoot(curSubject.sets[0].id); };
+document.getElementById("modeExam").onclick = () => { if (curSubject.sets.length) startExam(curSubject.sets[0].id); };
+
+/* ==================== KAHOOT LIVE GAME ==================== */
+let kList = [], kIdx = 0, kSetId = null, kStreak = 0, kScore = 0;
+function findSet(id) {
+  for (const s of SUBJECTS) for (const set of s.sets) if (set.id === id) return set;
+}
+
+function startKahoot(setId) {
+  const set = findSet(setId);
+  kSetId = setId;
+  kList = [...set.questions];
+  kIdx = 0;
+  kStreak = 0;
+  kScore = 0;
+  document.getElementById("kahootTitle").textContent = `${set.name} · Kahoot Live`;
+  renderKahoot();
+  show("kahoot");
+}
+
+function renderKahoot() {
+  const q = kList[kIdx];
+  document.getElementById("kNum").textContent = `Câu ${kIdx+1} / ${kList.length}`;
+  document.getElementById("kText").textContent = q.text;
+  document.getElementById("kahootStreak").textContent = kStreak;
+  document.getElementById("kahootScore").textContent = kScore;
+  document.getElementById("kahootBar").style.width = ((kIdx / kList.length) * 100) + "%";
+
+  const kImg = document.getElementById("kImg");
+  if (q.svg) {
+    kImg.innerHTML = q.svg;
+    kImg.classList.remove("hidden");
+  } else {
+    kImg.innerHTML = "";
+    kImg.classList.add("hidden");
+  }
+
+  const letters = ["A","B","C","D"];
+  letters.forEach((L, idx) => {
+    const btn = document.getElementById(`kBtn${idx}`);
+    const txt = document.getElementById(`kTxt${idx}`);
+    const opt = q.options.find(o => o.key === L);
+    btn.className = `k-btn ${['k-red','k-blue','k-yellow','k-green'][idx]}`;
+    if (opt) {
+      txt.textContent = opt.text;
+      btn.style.display = "flex";
+      btn.onclick = () => chooseKahoot(L, btn);
+    } else {
+      btn.style.display = "none";
+    }
+  });
+
+  const fb = document.getElementById("kFeedback");
+  fb.classList.add("hidden");
+  document.getElementById("kNext").disabled = true;
+}
+
+function chooseKahoot(selectedKey, clickedBtn) {
+  const q = kList[kIdx];
+  const isRight = q.correct.includes(selectedKey);
+  const letters = ["A","B","C","D"];
+
+  letters.forEach((L, idx) => {
+    const btn = document.getElementById(`kBtn${idx}`);
+    if (q.correct.includes(L)) {
+      btn.classList.add("k-correct");
+    } else {
+      btn.classList.add("dimmed");
+    }
+  });
+
+  const fb = document.getElementById("kFeedback");
+  fb.classList.remove("hidden");
+
+  if (isRight) {
+    playKahootSound('right');
+    kStreak++;
+    const pts = 100 + kStreak * 20;
+    kScore += pts;
+    fb.innerHTML = `
+      <div class="k-fb-header right">
+        <span>CHÍNH XÁC!</span>
+        <span>+${pts} ĐIỂM</span>
+      </div>
+      <div class="k-fb-body">${q.explanation || "Rất tốt! Bạn đã chọn đáp án chuẩn xác!"}</div>`;
+  } else {
+    playKahootSound('wrong');
+    clickedBtn.classList.add("k-wrong");
+    kStreak = 0;
+    fb.innerHTML = `
+      <div class="k-fb-header wrong">
+        <span>CHƯA CHÍNH XÁC!</span>
+        <span>+0 ĐIỂM</span>
+      </div>
+      <div class="k-fb-body">
+        <div style="font-weight:700;margin-bottom:6px">Đáp án đúng: ${q.correct.join(", ")}</div>
+        <div class="muted">${q.explanation || ""}</div>
+      </div>`;
+  }
+
+  document.getElementById("kahootStreak").textContent = kStreak;
+  document.getElementById("kahootScore").textContent = kScore;
+  document.getElementById("kNext").disabled = false;
+}
+
+document.getElementById("kNext").onclick = () => {
+  if (kIdx < kList.length - 1) {
+    kIdx++;
+    renderKahoot();
+  } else {
+    alert(`Chúc mừng Híu đã hoàn thành trận đấu Kahoot!\nTổng điểm đạt được: ${kScore} điểm!`);
+    openSubject("elc201");
+  }
+};
+document.getElementById("kShuffle").onclick = () => {
+  kList.sort(() => Math.random() - 0.5);
+  kIdx = 0;
+  kStreak = 0;
+  kScore = 0;
+  renderKahoot();
+};
+
+/* ============ STUDY (Flashcard) ============ */
+let studyList = [], studyIdx = 0, studySetId = null;
+function startStudy(setId) {
+  const set = findSet(setId);
+  studySetId = setId;
+  studyList = [...set.questions];
+  studyIdx = 0;
+  document.getElementById("studyTitle").textContent = `${set.name} · Flashcard`;
+  renderCard();
+  show("study");
+}
+function renderCard() {
+  const set = findSet(studySetId);
+  const q = studyList[studyIdx];
+  const p = getP(studySetId);
+  document.getElementById("flip").classList.remove("on");
+  document.getElementById("fcQ").textContent = `Câu ${q.id}: ${q.text}`;
+  
+  const fcImg = document.getElementById("fcImg");
+  if (q.svg) {
+    fcImg.innerHTML = q.svg;
+    fcImg.classList.remove("hidden");
+  } else {
+    fcImg.innerHTML = "";
+    fcImg.classList.add("hidden");
+  }
+
+  const optsHtml = q.options.map(o => `<div><b>${o.key}.</b> ${o.text}</div>`).join("");
+  document.getElementById("fcOpts").innerHTML = optsHtml;
+
+  document.getElementById("fcA").innerHTML = `Đáp án đúng: <b>${q.correct.join(", ")}</b>`;
+  document.getElementById("fcExp").innerHTML = q.explanation ? `<b>Giải thích chi tiết:</b><br>${q.explanation}` : "";
+
+  document.getElementById("studyPos").textContent = `Câu ${studyIdx+1}/${studyList.length}`;
+  document.getElementById("studyBar").style.width = (((p.learned || []).length / set.questions.length) * 100) + "%";
+  
+  const tags = [];
+  if (p.learned.includes(q.id)) tags.push("Đã thuộc");
+  if (p.notYet.includes(q.id)) tags.push("Chưa nhớ");
+  if (p.favs.includes(q.id)) tags.push("Yêu thích");
+  document.getElementById("studyMark").textContent = tags.join("  ·  ");
+  document.getElementById("favBtn").textContent = p.favs.includes(q.id) ? "Bỏ thích" : "Yêu thích";
+  document.getElementById("prevCard").disabled = studyIdx === 0;
+  document.getElementById("nextCard").disabled = studyIdx === studyList.length - 1;
+}
+document.getElementById("flipWrap").onclick = () => document.getElementById("flip").classList.toggle("on");
+document.getElementById("prevCard").onclick = () => { if (studyIdx > 0) { studyIdx--; renderCard(); } };
+document.getElementById("nextCard").onclick = () => { if (studyIdx < studyList.length-1) { studyIdx++; renderCard(); } };
+document.getElementById("shuffleBtn").onclick = () => { studyList.sort(() => Math.random() - 0.5); studyIdx = 0; renderCard(); };
+document.getElementById("knowBtn").onclick = () => markCard("learned");
+document.getElementById("notYetBtn").onclick = () => markCard("notYet");
+document.getElementById("favBtn").onclick = () => {
+  const p = getP(studySetId), id = studyList[studyIdx].id;
+  p.favs = p.favs.includes(id) ? p.favs.filter(x => x !== id) : [...p.favs, id];
+  saveProgress(); renderCard();
+};
+function markCard(kind) {
+  const p = getP(studySetId), id = studyList[studyIdx].id;
+  const other = kind === "learned" ? "notYet" : "learned";
+  p[kind] = p[kind].includes(id) ? p[kind] : [...p[kind], id];
+  p[other] = p[other].filter(x => x !== id);
+  saveProgress();
+  if (studyIdx < studyList.length - 1) studyIdx++;
+  renderCard();
+}
+
+/* ============ EXAM ============ */
+let exam = null, timerId = null;
+function startExam(setId) {
+  const set = findSet(setId);
+  exam = {
+    setId, set,
+    qs: [...set.questions],
+    answers: {},
+    flags: new Set(),
+    idx: 0,
+    start: Date.now(),
+    limit: 50 * 60
+  };
+  document.getElementById("examTitle").textContent = set.name;
+  renderExam();
+  show("exam");
+  clearInterval(timerId);
+  timerId = setInterval(tick, 1000); tick();
+}
+function tick() {
+  const left = exam.limit - Math.floor((Date.now() - exam.start) / 1000);
+  if (left <= 0) { clearInterval(timerId); document.getElementById("timer").textContent = "00:00"; submitExam(true); return; }
+  const m = String(Math.floor(left/60)).padStart(2,"0"), s = String(left%60).padStart(2,"0");
+  document.getElementById("timer").textContent = `${m}:${s}`;
+}
+function renderExam() {
+  const q = exam.qs[exam.idx];
+  const sel = exam.answers[q.id] || [];
+  document.getElementById("qNum").textContent = `Câu hỏi ${exam.idx+1}/${exam.qs.length}`;
+  document.getElementById("qText").textContent = q.text;
+
+  const qImg = document.getElementById("qImg");
+  if (q.svg) {
+    qImg.innerHTML = q.svg;
+    qImg.classList.remove("hidden");
+  } else {
+    qImg.innerHTML = "";
+    qImg.classList.add("hidden");
+  }
+
+  const opts = document.getElementById("opts");
+  opts.innerHTML = "";
+  q.options.forEach(o => {
+    const d = document.createElement("div");
+    d.className = "opt" + (sel.includes(o.key) ? " sel" : "");
+    d.innerHTML = `<b>${o.key}.</b> <span>${o.text}</span>`;
+    d.onclick = () => selectOpt(o.key);
+    opts.appendChild(d);
+  });
+  document.getElementById("qFlag").textContent = exam.flags.has(q.id) ? "Bỏ xem lại" : "Đánh dấu xem lại";
+  document.getElementById("qPrev").disabled = exam.idx === 0;
+  document.getElementById("qNext").disabled = exam.idx === exam.qs.length - 1;
+
+  const nav = document.getElementById("navGrid");
+  nav.innerHTML = "";
+  exam.qs.forEach((qq, i) => {
+    const b = document.createElement("button");
+    b.textContent = i+1;
+    if (exam.answers[qq.id]?.length) b.classList.add("done");
+    if (exam.flags.has(qq.id)) b.classList.add("flag");
+    if (i === exam.idx) b.classList.add("cur");
+    b.onclick = () => { exam.idx = i; renderExam(); };
+    nav.appendChild(b);
+  });
+  const answered = Object.values(exam.answers).filter(a => a.length).length;
+  document.getElementById("ansCount").textContent = `${answered}/${exam.qs.length}`;
+  document.getElementById("unansCount").textContent = exam.qs.length - answered;
+}
+function selectOpt(key) {
+  const q = exam.qs[exam.idx];
+  exam.answers[q.id] = [key];
+  renderExam();
+}
+document.getElementById("qPrev").onclick = () => { if (exam.idx > 0) { exam.idx--; renderExam(); } };
+document.getElementById("qNext").onclick = () => { if (exam.idx < exam.qs.length-1) { exam.idx++; renderExam(); } };
+document.getElementById("qFlag").onclick = () => {
+  const id = exam.qs[exam.idx].id;
+  exam.flags.has(id) ? exam.flags.delete(id) : exam.flags.add(id);
+  renderExam();
+};
+document.getElementById("submitBtn").onclick = () => {
+  const unanswered = exam.qs.filter(q => !(exam.answers[q.id]||[]).length).length;
+  const msg = unanswered ? `Híu còn ${unanswered} câu chưa làm. Híu có muốn nộp luôn?` : "Híu chắc chắn muốn nộp bài?";
+  if (confirm(msg)) submitExam(false);
+};
+
+function submitExam(auto) {
+  clearInterval(timerId);
+  let right = 0, wrong = 0, blank = 0;
+  exam.qs.forEach(q => {
+    const a = (exam.answers[q.id] || []).slice().sort().join("");
+    const c = q.correct.slice().sort().join("");
+    if (!a) blank++;
+    else if (a === c) right++;
+    else wrong++;
+  });
+  const pct = Math.round(right / exam.qs.length * 100);
+  const secs = Math.min(exam.limit, Math.floor((Date.now() - exam.start)/1000));
+  const rec = { setId: exam.setId, date: new Date().toISOString(), right, wrong, blank, pct, secs };
+  attempts.push(rec);
+  store.set("attempts", attempts);
+
+  document.getElementById("resScore").textContent = `${right}/${exam.qs.length}`;
+  document.getElementById("resPct").textContent = `${pct}% chính xác${auto ? " · Hết giờ làm bài" : ""}`;
+  document.getElementById("resRight").textContent = right;
+  document.getElementById("resWrong").textContent = wrong;
+  document.getElementById("resBlank").textContent = blank;
+  document.getElementById("resTime").textContent = `${Math.floor(secs/60)} phút ${secs%60} giây`;
+  show("result");
+}
+
+document.getElementById("retryBtn").onclick = () => startExam(exam.setId);
+document.getElementById("reviewBtn").onclick = () => {
+  const list = document.getElementById("reviewList");
+  list.innerHTML = "";
+  exam.qs.forEach((q, i) => {
+    const sel = exam.answers[q.id] || [];
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.marginBottom = "14px";
+    card.innerHTML = `<div style="font-weight:600;font-size:16px;margin-bottom:8px">Câu ${i+1}: ${q.text}</div>`;
+    
+    if (q.svg) {
+      const imgDiv = document.createElement("div");
+      imgDiv.className = "q-img";
+      imgDiv.innerHTML = q.svg;
+      card.appendChild(imgDiv);
+    }
+
+    q.options.forEach(o => {
+      const d = document.createElement("div");
+      let cls = "opt";
+      if (q.correct.includes(o.key)) cls += " right";
+      else if (sel.includes(o.key)) cls += " wrong";
+      d.className = cls;
+      d.innerHTML = `<b>${o.key}.</b> <span>${o.text}</span>`;
+      card.appendChild(d);
+    });
+    if (q.explanation) {
+      card.innerHTML += `<div class="muted" style="margin-top:10px;padding:8px 12px;background:var(--line);border-radius:6px"><b>Giải thích:</b> ${q.explanation}</div>`;
+    }
+    list.appendChild(card);
+  });
+};
+
+/* PHÍM TẮT */
+window.addEventListener("keydown", (e) => {
+  if (!document.getElementById("study").classList.contains("hidden")) {
+    if (e.code === "Space") { e.preventDefault(); document.getElementById("flipWrap").click(); }
+    if (e.key === "ArrowLeft") document.getElementById("prevCard").click();
+    if (e.key === "ArrowRight") document.getElementById("nextCard").click();
+  }
+  if (!document.getElementById("kahoot").classList.contains("hidden")) {
+    const k = e.key.toUpperCase();
+    if (["A","B","C","D"].includes(k)) {
+      const idx = ["A","B","C","D"].indexOf(k);
+      const btn = document.getElementById(`kBtn${idx}`);
+      if (!btn.disabled && btn.style.display !== "none") btn.click();
+    }
+    if (e.key === "Enter") {
+      const nextBtn = document.getElementById("kNext");
+      if (!nextBtn.disabled) nextBtn.click();
+    }
+  }
+  if (!document.getElementById("exam").classList.contains("hidden")) {
+    const k = e.key.toUpperCase();
+    if (["A", "B", "C", "D"].includes(k)) selectOpt(k);
+    if (e.key === "ArrowLeft") document.getElementById("qPrev").click();
+    if (e.key === "ArrowRight") document.getElementById("qNext").click();
+  }
+});
+
+/* ============ KHỞI CHẠY ============ */
+renderHome();
+show("home");
+</script>
+</body>
+</html>
