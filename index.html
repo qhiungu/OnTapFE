@@ -257,6 +257,17 @@
   .instant-feedback.partial { border-color:var(--primary); }
   .instant-feedback.unknown { background:var(--line); }
   .instant-feedback .explanation { margin-top:8px; color:var(--text); }
+  .instant-feedback .exam-tip, .related-questions { margin-top:10px; padding-top:8px; border-top:1px solid var(--line); color:var(--text); }
+  .related-item { margin-top:8px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:var(--card); }
+  .related-item small { display:block; color:var(--muted); margin-top:3px; }
+  .related-practice-button { margin-top:8px; padding:7px 10px; }
+  .related-practice { margin-top:12px; padding:12px; border:1px solid var(--primary); border-radius:8px; background:var(--card); }
+  .practice-options .opt { cursor:pointer; }
+  .practice-feedback { margin-top:10px; padding:10px; border-radius:8px; }
+  .practice-feedback.correct { border:1px solid var(--ok); background:var(--opt-right); color:var(--ok); }
+  .practice-feedback.incorrect { border:1px solid var(--bad); background:var(--opt-wrong); color:var(--bad); }
+  .wrong-option-details { margin-top:10px; color:var(--text); }
+  .wrong-option-item { margin-top:8px; padding:8px; border:1px solid var(--line); border-radius:6px; }
   
   .navgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(42px,1fr)); gap:6px; max-height: 380px; overflow-y: auto; padding: 4px; }
   .navgrid button { padding:8px 0; border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:6px; cursor:pointer; font-size:13px; font-weight: 500; }
@@ -468,6 +479,7 @@
         </div>
       </div>
       <div class="card">
+        <div class="stat hidden" id="instantScoreRow"><span>Điểm tạm tính</span><b id="instantScore">—/100</b></div>
         <div class="stat"><span>Đã chọn</span><b id="ansCount">0/50</b></div>
         <div class="stat"><span>Còn trống</span><b id="unansCount">50</b></div>
         <div class="navgrid" id="navGrid" style="margin:14px 0"></div>
@@ -481,6 +493,8 @@
     <div class="card" style="text-align:center">
       <div class="muted">Kết quả bài thi</div>
       <div class="big" id="resScore">0/50</div>
+       <div class="muted" style="margin-top:8px">Điểm thang 100</div>
+       <div class="big" id="resGrade">—/100</div>
       <div id="resPct" class="muted"></div>
       <div class="stat" style="margin-top:16px;max-width:360px;margin-left:auto;margin-right:auto">
         <span>Số câu đúng</span><b id="resRight" style="color:var(--ok)"></b>
@@ -1453,13 +1467,23 @@ function markCard(kind) {
 
 /* ============ EXAM ============ */
 let exam = null, timerId = null;
+function shuffleQuestions(questions) {
+  const shuffled = [...questions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 function startExam(setId, instantFeedback = false) {
   const set = findSet(setId);
   curSubject = SUBJECTS.find(s => s.sets.some(st => st.id === setId));
   exam = {
     setId, set, instantFeedback,
-    qs: [...set.questions],
+    qs: shuffleQuestions(set.questions),
     answers: {},
+    lockedAnswers: {},
     flags: new Set(),
     idx: 0,
     start: Date.now(),
@@ -1471,6 +1495,21 @@ function startExam(setId, instantFeedback = false) {
   clearInterval(timerId);
   timerId = setInterval(tick, 1000); tick();
 }
+function updateInstantScore() {
+  const row = document.getElementById("instantScoreRow");
+  row.classList.toggle("hidden", !exam.instantFeedback);
+  const hasUngraded = exam.qs.some(q => !q.sourceFile && !(q.correct || []).length);
+  const eligible = exam.qs.filter(q => !(q.sourceFile && !(q.correct || []).length));
+  let right = 0;
+  for (const q of eligible) {
+    const selected = (exam.answers[q.id] || []).slice().sort().join("");
+    const correct = (q.correct || []).slice().sort().join("");
+    if (selected && correct && selected === correct) right++;
+  }
+  const score = hasUngraded || !eligible.length ? "—/100" : Math.round(right / eligible.length * 100) + "/100";
+  document.getElementById("instantScore").textContent = score;
+}
+
 function tick() {
   const left = exam.limit - Math.floor((Date.now() - exam.start) / 1000);
   if (left <= 0) { clearInterval(timerId); document.getElementById("timer").textContent = "00:00"; submitExam(true); return; }
@@ -1513,7 +1552,200 @@ function renderExam() {
   });
   const answered = Object.values(exam.answers).filter(a => a.length).length;
   document.getElementById("ansCount").textContent = `${answered}/${exam.qs.length}`;
+  updateInstantScore();
   document.getElementById("unansCount").textContent = exam.qs.length - answered;
+}
+const examSimilarityStopWords = new Set("what which who where when how is are was were be been being a an the of to in for with from by on at and or this that these those does do did can could should would will it its as into than called following question answer select choose".split(" "));
+function examQuestionTokens(text) {
+  return [...new Set(String(text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(word => word.length > 2 && !examSimilarityStopWords.has(word)))];
+}
+function findRelatedQuestions(q, setId) {
+  const subject = SUBJECTS.find(item => item.sets.some(set => set.id === setId));
+  if (!subject) return [];
+  const currentText = String(q.text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  const currentTokens = examQuestionTokens(q.text);
+  const related = [];
+  for (const set of subject.sets) {
+    if (set.id === setId) continue;
+    for (const candidate of set.questions) {
+      const candidateText = String(candidate.text || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+      const candidateTokens = examQuestionTokens(candidate.text);
+      const shared = currentTokens.filter(token => candidateTokens.includes(token)).length;
+      const union = new Set([...currentTokens, ...candidateTokens]).size || 1;
+      const score = shared / union;
+      const exact = currentText === candidateText;
+      if (exact || (shared >= 4 && score >= 0.48)) related.push({ set, question: candidate, exact, score });
+    }
+  }
+  return related.sort((a, b) => Number(b.exact) - Number(a.exact) || b.score - a.score).slice(0, 4);
+}
+function quickTipForQuestion(q) {
+  const text = (String(q.text || "") + " " + String(q.explanation || "")).toLowerCase();
+  if (/vlsm|subnet|prefix|broadcast|network address/.test(text)) return "Mẹo: xác định prefix/mask trước, rồi mới tính network, broadcast và dải host. Với VLSM, cấp mạng lớn nhất trước.";
+  if (/configure terminal|config t|privileged|user exec|router prompt|command|cli/.test(text)) return "Mẹo: nhìn dấu nhắc Cisco — > là user EXEC, # là privileged EXEC, còn (config)# là chế độ cấu hình.";
+  if (/tcp|udp|port number|three-way handshake/.test(text)) return "Mẹo: TCP có kết nối và kiểm soát truyền tin; UDP gửi nhanh, không thiết lập kết nối. Đọc kỹ xem câu hỏi hỏi giao thức hay số cổng.";
+  if (/osi|tcp.ip|data link|network layer|transport layer|application layer/.test(text)) return "Mẹo: nhận diện đơn vị dữ liệu — bit, frame, packet, segment — để tìm đúng tầng mạng.";
+  if (/ipv6|ipv4|arp|neighbor solicitation|mac address|ethernet/.test(text)) return "Mẹo: xác định địa chỉ và mạng đang hỏi. ARP tìm MAC từ IPv4; IPv6 dùng Neighbor Discovery.";
+  if (/diode|rectifier|peak|average|piv|load resistor/.test(text)) return "Mẹo: khoanh rõ đề hỏi giá trị đỉnh hay trung bình; kiểm tra diode đang dẫn hay khóa rồi mới tính.";
+  if (/jfet|mosfet|gate-to-source|pinch-off|transconductance/.test(text)) return "Mẹo: xác định loại FET và dấu của VGS trước; sau đó dùng đúng công thức của JFET hoặc MOSFET.";
+  if (/bjt|beta|collector current|emitter current|base current/.test(text)) return "Mẹo: nhớ IC = βIB và IE = IC + IB; kiểm tra đề hỏi dòng hay điện áp trước khi thay số.";
+  if (/op-amp|operational amplifier|inverting|noninverting|comparator/.test(text)) return "Mẹo: đầu vào đảo thường cho dấu âm ở độ lợi; đầu vào không đảo cho dấu dương. Xác định cấu hình trước khi dùng công thức.";
+  if (/bias|q-point|load line|quiescent/.test(text)) return "Mẹo: tìm điểm làm việc DC (Q-point) trước; phân tích AC sau. Đừng nhầm dòng đỉnh với dòng trung bình.";
+  return "Mẹo: tìm từ khóa trong yêu cầu, loại phương án sai rõ ràng và kiểm tra đơn vị hoặc từ phủ định trước khi chốt.";
+}
+function normalizeChoiceText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).join(" ");
+}
+function findCorrectUses(optionText, currentQuestion, setId) {
+  const needle = normalizeChoiceText(optionText);
+  if (needle.length < 5) return [];
+  const subject = SUBJECTS.find(item => item.sets.some(set => set.id === setId));
+  if (!subject) return [];
+  const uses = [];
+  for (const set of subject.sets) {
+    for (const candidate of set.questions) {
+      if (candidate === currentQuestion && set.id === setId) continue;
+      for (const key of candidate.correct || []) {
+        const correctOption = candidate.options.find(option => option.key === key);
+        if (correctOption && normalizeChoiceText(correctOption.text) === needle) {
+          uses.push({ set, question: candidate });
+          break;
+        }
+      }
+    }
+  }
+  return uses.slice(0, 2);
+}
+function appendWrongOptionMappings(container, question, setId) {
+  if (!(question.correct || []).length) return;
+  const wrongOptions = question.options.filter(option => !question.correct.includes(option.key));
+  if (!wrongOptions.length) return;
+  const details = document.createElement("details");
+  details.className = "wrong-option-details";
+  const summary = document.createElement("summary");
+  summary.textContent = "Các đáp án sai áp dụng cho câu nào?";
+  details.appendChild(summary);
+  for (const option of wrongOptions) {
+    const item = document.createElement("div");
+    item.className = "wrong-option-item";
+    const label = document.createElement("b");
+    label.textContent = option.key + ". " + option.text;
+    item.appendChild(label);
+    const uses = findCorrectUses(option.text, question, setId);
+    if (!uses.length) {
+      const note = document.createElement("div");
+      note.className = "explanation";
+      note.textContent = "Đáp án này chưa xuất hiện nguyên văn như đáp án đúng ở câu khác trong bộ đề đã nạp.";
+      item.appendChild(note);
+    } else {
+      for (const use of uses) {
+        const note = document.createElement("div");
+        note.className = "explanation";
+        note.textContent = "Đáp án này đúng ở " + use.set.name + " · Câu " + use.question.id + ": " + use.question.text + (use.question.explanation ? " Giải thích: " + use.question.explanation : "");
+        item.appendChild(note);
+      }
+    }
+    details.appendChild(item);
+  }
+  container.appendChild(details);
+}
+function startRelatedPractice(match, section) {
+  section.querySelector(".related-practice")?.remove();
+  const q = match.question;
+  const card = document.createElement("div");
+  card.className = "related-practice";
+  const label = document.createElement("b");
+  label.textContent = "Luyện thêm · " + match.set.name + " · Câu " + q.id + " (không tính vào điểm thi)";
+  const prompt = document.createElement("div");
+  prompt.className = "explanation";
+  prompt.textContent = q.text;
+  const media = document.createElement("div");
+  media.className = "q-img hidden";
+  renderQuestionMedia(media, q);
+  const options = document.createElement("div");
+  options.className = "practice-options";
+  const feedback = document.createElement("div");
+  let chosen = [];
+  let locked = false;
+  const required = q.selectionCount || (q.correct || []).length || 1;
+  const optionNodes = [];
+  const updateOptions = () => {
+    for (const item of optionNodes) {
+      const reveal = locked && (q.correct || []).length > 0;
+      item.node.className = "opt" + (reveal && q.correct.includes(item.key) ? " right" : reveal && chosen.includes(item.key) ? " wrong" : chosen.includes(item.key) ? " sel" : "");
+    }
+  };
+  const finish = () => {
+    locked = true;
+    updateOptions();
+    const exact = chosen.length === (q.correct || []).length && chosen.every(key => q.correct.includes(key));
+    feedback.className = "practice-feedback " + (exact ? "correct" : "incorrect");
+    const correctText = q.correct.map(key => { const option = q.options.find(item => item.key === key); return key + (option ? ". " + option.text : ""); }).join(" · ");
+    feedback.textContent = exact ? "✓ Đúng rồi." : "✗ Chưa đúng. Đáp án đúng: " + correctText;
+    if (q.explanation) {
+      const explanation = document.createElement("div");
+      explanation.className = "explanation";
+      explanation.textContent = "Giải thích dễ hiểu: " + q.explanation;
+      feedback.appendChild(explanation);
+    }
+    const tip = document.createElement("div");
+    tip.className = "explanation";
+    tip.textContent = quickTipForQuestion(q);
+    feedback.appendChild(tip);
+    appendWrongOptionMappings(feedback, q, match.set.id);
+  };
+  for (const option of q.options) {
+    const node = document.createElement("div");
+    node.className = "opt";
+    node.innerHTML = "<b>" + option.key + ".</b> <span>" + escapeQuestionText(option.text) + "</span>";
+    node.onclick = () => {
+      if (locked) return;
+      if (required === 1) chosen = [option.key];
+      else if (chosen.includes(option.key)) chosen = chosen.filter(key => key !== option.key);
+      else if (chosen.length < required) chosen.push(option.key);
+      updateOptions();
+      if (chosen.length >= required) finish();
+    };
+    optionNodes.push({ key: option.key, node });
+    options.appendChild(node);
+  }
+  card.append(label, prompt, media, options, feedback);
+  section.appendChild(card);
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function renderRelatedQuestions(container, q) {
+  const matches = findRelatedQuestions(q, exam.setId);
+  const section = document.createElement("div");
+  section.className = "related-questions";
+  const title = document.createElement("b");
+  title.textContent = "Đối chiếu câu trong các đề khác";
+  section.appendChild(title);
+  if (!matches.length) {
+    const empty = document.createElement("div");
+    empty.className = "explanation";
+    empty.textContent = "Chưa tìm thấy câu trùng hoặc gần giống rõ ràng trong các bộ đề cùng môn.";
+    section.appendChild(empty);
+  } else {
+    for (const match of matches) {
+      const item = document.createElement("div");
+      item.className = "related-item";
+      const label = document.createElement("b");
+      label.textContent = match.set.name + " · Câu " + match.question.id + (match.exact ? " · Trùng câu" : " · Gần giống");
+      const stem = document.createElement("small");
+      stem.textContent = match.question.text;
+      item.append(label, stem);
+      if ((match.question.correct || []).length) {
+        const practiceButton = document.createElement("button");
+        practiceButton.type = "button";
+        practiceButton.className = "btn ghost related-practice-button";
+        practiceButton.textContent = "Làm thêm câu này";
+        practiceButton.onclick = () => startRelatedPractice(match, section);
+        item.appendChild(practiceButton);
+      }
+      section.appendChild(item);
+    }
+  }
+  container.appendChild(section);
 }
 function renderExamFeedback(q, selected) {
   const panel = document.getElementById("examFeedback");
@@ -1545,7 +1777,7 @@ function renderExamFeedback(q, selected) {
   panel.className = "instant-feedback " + state;
   const heading = document.createElement("div");
   heading.style.fontWeight = "700";
-  heading.textContent = title;
+  heading.textContent = title + (exam.lockedAnswers[q.id] ? " · Đã khóa lựa chọn." : "");
   panel.appendChild(heading);
   if (!correct.length && q.answerText) {
     const answer = document.createElement("div");
@@ -1556,18 +1788,34 @@ function renderExamFeedback(q, selected) {
   if (q.explanation) {
     const explanation = document.createElement("div");
     explanation.className = "explanation";
-    explanation.innerHTML = "<b>Giải thích:</b> " + escapeQuestionText(q.explanation);
+    explanation.innerHTML = "<b>Giải thích dễ hiểu:</b> " + escapeQuestionText(q.explanation);
+    panel.appendChild(explanation);
+  } else if (!q.answerText) {
+    const explanation = document.createElement("div");
+    explanation.className = "explanation";
+    explanation.textContent = "Đọc câu hỏi, so sánh từng lựa chọn với kiến thức đang hỏi rồi loại đáp án không phù hợp.";
     panel.appendChild(explanation);
   }
+  appendWrongOptionMappings(panel, q, exam.setId);
+  if (selected.length >= required) {
+    const tip = document.createElement("div");
+    tip.className = "exam-tip";
+    tip.innerHTML = "<b>Mẹo cho câu này:</b> " + escapeQuestionText(quickTipForQuestion(q));
+    panel.appendChild(tip);
+  }
+  renderRelatedQuestions(panel, q);
 }
 
 function selectOpt(key) {
   const q = exam.qs[exam.idx];
   if (!q.options.some(option => option.key === key)) return;
+  if (exam.instantFeedback && exam.lockedAnswers[q.id]) return;
   const selected = exam.answers[q.id] || [];
-  if ((q.selectionCount || q.correct.length) === 1) exam.answers[q.id] = [key];
+  const required = q.selectionCount || q.correct.length || 1;
+  if (required === 1) exam.answers[q.id] = [key];
   else if (selected.includes(key)) exam.answers[q.id] = selected.filter(answer => answer !== key);
-  else if (!q.correct.length || selected.length < q.correct.length) exam.answers[q.id] = [...selected, key];
+  else if (selected.length < required) exam.answers[q.id] = [...selected, key];
+  if (exam.instantFeedback && (exam.answers[q.id] || []).length >= required) exam.lockedAnswers[q.id] = true;
   renderExam();
 }
 document.getElementById("qPrev").onclick = () => { if (exam.idx > 0) { exam.idx--; renderExam(); } };
@@ -1603,7 +1851,7 @@ function submitExam(auto) {
     }
   });
   if (wrong) saveProgress();
-  const pct = Math.round(right / gradedCount * 100);
+  const pct = gradedCount ? Math.round(right / gradedCount * 100) : 0;
   const secs = Math.min(exam.limit, Math.floor((Date.now() - exam.start)/1000));
   if (!ungraded) {
     attempts.push({ setId: exam.setId, date: new Date().toISOString(), right, wrong, blank, pct, secs });
@@ -1611,6 +1859,7 @@ function submitExam(auto) {
   }
   document.getElementById("reviewBtn").textContent = ungraded ? "Xem lại lựa chọn" : "Xem lại bài thi & Đáp án";
   document.getElementById("resScore").textContent = ungraded ? (exam.qs.length - blank) + "/" + exam.qs.length + " đã trả lời" : `${right}/${gradedCount}`;
+  document.getElementById("resGrade").textContent = ungraded ? "—/100" : `${pct}/100`;
   document.getElementById("resPct").textContent = (ungraded ? "Chưa có đáp án đối chiếu" : pct + "% chính xác") + (excluded ? ` · ${excluded} câu không tính điểm` : "") + (auto ? " · Hết giờ làm bài" : "");
   document.getElementById("resRight").textContent = ungraded ? "—" : right;
   document.getElementById("resWrong").textContent = ungraded ? "—" : wrong;
