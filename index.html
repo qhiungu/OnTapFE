@@ -1068,19 +1068,32 @@ const SUBJECTS = [
   ...importedSubjects
 ];
 
-const elc201Subject = SUBJECTS.find(subject => subject.id === "elc201");
-const elc201CombinedExam = {
-  id: "elc201-tong-hop-60p",
-  name: "ELC201 · Tổng hợp 5 đề",
-  durationMinutes: 60,
-  questions: elc201Subject.sets.flatMap(set => set.questions.map(question => ({
-    ...question,
-    id: set.id + "/" + question.id,
-    originalSetId: set.id,
-    originalSetName: set.name,
-    originalQuestionId: question.id
-  })))
-};
+const combinedExamsBySubject = new Map(SUBJECTS.map(subject => [
+  subject.id,
+  {
+    id: subject.id + "-tong-hop-60p",
+    name: subject.code + " · Tổng hợp " + subject.sets.length + " đề",
+    combinedSubjectId: subject.id,
+    durationMinutes: 60,
+    questions: subject.sets.flatMap(set => set.questions.map(question => ({
+      ...question,
+      id: set.id + "/" + question.id,
+      originalSetId: set.id,
+      originalSetName: set.name,
+      originalQuestionId: question.id
+    })))
+  }
+]));
+
+const combinedExamsById = new Map(
+  [...combinedExamsBySubject.values()].map(set => [set.id, set])
+);
+
+function subjectForSet(set) {
+  return SUBJECTS.find(subject => set.combinedSubjectId
+    ? subject.id === set.combinedSubjectId
+    : subject.sets.some(candidate => candidate.id === set.id));
+}
 
 /* ============ STATE LƯU TRỮ ============ */
 const store = {
@@ -1230,20 +1243,23 @@ function openSubject(id) {
   document.getElementById("subjMeta").textContent = `Danh sách ${curSubject.sets.length} bộ đề ôn luyện. Chọn bộ đề để học Kahoot, Flashcard hoặc thi thử 50 phút:`;
   const grid = document.getElementById("setGrid");
   grid.innerHTML = "";
-  if (curSubject === elc201Subject) {
+  const combinedExam = combinedExamsBySubject.get(curSubject.id);
+  if (combinedExam) {
+    const ungradedCount = combinedExam.questions.filter(question => !question.correct.length).length;
     const combined = document.createElement("div");
     combined.className = "card";
     combined.innerHTML = `
-      <h3 style="margin-top:0">Tổng hợp ELC201 · 60 phút${completionTick(completedExam(elc201CombinedExam), "Đã hoàn thành bài thi")}</h3>
-      <p class="muted" style="margin:6px 0 10px">${elc201CombinedExam.questions.length} câu từ cả 5 đề. Câu hỏi và đáp án được xáo khi bắt đầu.</p>
+      <h3 style="margin-top:0">Tổng hợp ${curSubject.code} · 60 phút${completionTick(completedExam(combinedExam), "Đã hoàn thành bài thi")}</h3>
+      <p class="muted" style="margin:6px 0 10px">${combinedExam.questions.length} câu từ cả ${curSubject.sets.length} đề.${ungradedCount ? " Có " + ungradedCount + " câu không tính điểm." : ""}</p>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn" data-instant-exam="${elc201CombinedExam.id}">Thi 60p · Chấm ngay${completionTick(getP(elc201CombinedExam.id).completed?.instantExam)}</button>
-        <button class="btn ghost" data-exam="${elc201CombinedExam.id}">Thi 60p · Chấm khi nộp${completionTick(getP(elc201CombinedExam.id).completed?.exam)}</button>
+        <button class="btn" data-instant-exam="${combinedExam.id}">Thi 60p · Chấm ngay${completionTick(getP(combinedExam.id).completed?.instantExam)}</button>
+        <button class="btn ghost" data-exam="${combinedExam.id}">Thi 60p · Chấm khi nộp${completionTick(getP(combinedExam.id).completed?.exam)}</button>
       </div>`;
     const review = document.createElement("button");
     review.className = "btn ghost";
-    review.dataset.missed = elc201CombinedExam.id;
-    review.textContent = "Ôn lại câu sai (" + missedQuestions(elc201CombinedExam).length + ")";
+    review.dataset.missed = combinedExam.id;
+    const missed = missedQuestions(combinedExam).length;
+    review.innerHTML = "Ôn lại câu sai (" + missed + ")" + completionTick(getP(combinedExam.id).completed?.reviewMisses && missed === 0);
     combined.querySelector("div").appendChild(review);
     grid.appendChild(combined);
   }
@@ -1286,7 +1302,8 @@ const kahootKeys = ["A", "B", "C", "D", "E", "F"];
 let kSelected = [], kReviewingMisses = false;
 let kList = [], kIdx = 0, kSetId = null, kStreak = 0, kScore = 0;
 function findSet(id) {
-  if (id === elc201CombinedExam.id) return elc201CombinedExam;
+  const combined = combinedExamsById.get(id);
+  if (combined) return combined;
   for (const s of SUBJECTS) for (const set of s.sets) if (set.id === id) return set;
 }
 
@@ -1294,13 +1311,13 @@ function startKahoot(setId, reviewMisses = false) {
   const set = findSet(setId);
   const questions = reviewMisses ? missedQuestions(set) : [...set.questions];
   if (!questions.length) {
-    alert(set === elc201CombinedExam ? "Chưa có câu sai cần ôn từ đề tổng hợp. Câu sai được lưu khi nộp bài." : "Bộ đề này chưa có câu sai cần luyện. Hãy làm Kahoot hoặc nộp bài Thi 50p để ghi nhận câu sai.");
+    alert(set.combinedSubjectId ? "Chưa có câu sai cần ôn từ đề tổng hợp. Câu sai được lưu khi nộp bài." : "Bộ đề này chưa có câu sai cần luyện. Hãy làm Kahoot hoặc nộp bài Thi 50p để ghi nhận câu sai.");
     return;
   }
   kReviewingMisses = reviewMisses;
-  curSubject = set === elc201CombinedExam ? elc201Subject : SUBJECTS.find(s => s.sets.some(st => st.id === setId));
+  curSubject = subjectForSet(set);
   kSetId = setId;
-  kList = set === elc201CombinedExam ? shuffleQuestions(questions.map(shuffleQuestionOptions)) : questions;
+  kList = set.combinedSubjectId ? shuffleQuestions(questions.map(shuffleQuestionOptions)) : questions;
   kIdx = 0;
   kStreak = 0;
   kScore = 0;
@@ -1477,7 +1494,7 @@ function gradeKahoot(selected) {
       </div>`;
   }
 
-  if (kReviewingMisses && kSetId === elc201CombinedExam.id) {
+  if (kReviewingMisses && combinedExamsById.has(kSetId)) {
     const tip = document.createElement("div");
     tip.className = "explanation";
     tip.textContent = quickTipForQuestion(q);
@@ -1600,7 +1617,7 @@ function shuffleQuestionOptions(question) {
 
 function startExam(setId, instantFeedback = false) {
   const set = findSet(setId);
-  curSubject = set === elc201CombinedExam ? elc201Subject : SUBJECTS.find(s => s.sets.some(st => st.id === setId));
+  curSubject = subjectForSet(set);
   exam = {
     setId, set, instantFeedback,
     qs: shuffleQuestions(set.questions.map(shuffleQuestionOptions)),
@@ -1619,7 +1636,7 @@ function startExam(setId, instantFeedback = false) {
 }
 function examPercent(right, total) {
   if (!total) return 0;
-  const precision = exam.set === elc201CombinedExam ? 10 : 1;
+  const precision = exam.set.combinedSubjectId ? 10 : 1;
   return Math.round(right / total * 100 * precision) / precision;
 }
 
@@ -1669,7 +1686,7 @@ function renderExam() {
   document.getElementById("qNext").disabled = exam.idx === exam.qs.length - 1;
 
   const nav = document.getElementById("navGrid");
-  const isCombined = exam.set === elc201CombinedExam;
+  const isCombined = Boolean(exam.set.combinedSubjectId);
   nav.style.maxHeight = isCombined ? "260px" : "";
   nav.style.overflowY = isCombined ? "auto" : "";
   const previousScroll = nav.scrollTop;
@@ -2008,7 +2025,7 @@ function submitExam(auto) {
     else if (q.correct.length) {
       wrong++;
       recordMiss(q.originalSetId ?? exam.setId, q.originalQuestionId ?? q.id);
-      if (exam.set === elc201CombinedExam) recordMiss(exam.setId, q.id);
+      if (exam.set.combinedSubjectId) recordMiss(exam.setId, q.id);
     }
   });
   if (wrong) saveProgress();
@@ -2021,7 +2038,7 @@ function submitExam(auto) {
     attempts.push({ setId: exam.setId, date: new Date().toISOString(), right, wrong, blank, pct, secs });
     store.set("attempts", attempts);
   }
-  const combinedMisses = exam.set === elc201CombinedExam ? missedQuestions(elc201CombinedExam).length : 0;
+  const combinedMisses = exam.set.combinedSubjectId ? missedQuestions(exam.set).length : 0;
   const reviewMissesButton = document.getElementById("reviewCombinedMissesBtn");
   reviewMissesButton.classList.toggle("hidden", combinedMisses === 0);
   reviewMissesButton.textContent = "Ôn lại câu sai (" + combinedMisses + ")";
@@ -2037,7 +2054,7 @@ function submitExam(auto) {
   show("result");
 }
 
-document.getElementById("reviewCombinedMissesBtn").onclick = () => startKahoot(elc201CombinedExam.id, true);
+document.getElementById("reviewCombinedMissesBtn").onclick = () => startKahoot(exam.setId, true);
 document.getElementById("retryBtn").onclick = () => startExam(exam.setId, exam.instantFeedback);
 document.getElementById("reviewBtn").onclick = () => {
   const list = document.getElementById("reviewList");
