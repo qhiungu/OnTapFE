@@ -289,6 +289,7 @@
     vertical-align:middle;
   }
   .navgrid button.done { white-space:nowrap; }
+  .completion-tick.is-wrong { color:#991b1b; background:#fee2e2; }
   .navgrid .completion-tick { margin-inline-start:.22em; font-size:.72em; }
   .navgrid button.flag { border-color:#f59e0b; }
   .navgrid button.cur { outline:2px solid var(--primary); }
@@ -529,6 +530,7 @@
       <div style="display:flex;gap:12px;justify-content:center;margin-top:24px">
         <button class="btn ghost" id="reviewBtn">Xem lại bài thi & Đáp án</button>
         <button class="btn" id="retryBtn">Làm lại bài thi</button>
+        <button class="btn ghost hidden" id="reviewCombinedMissesBtn">Ôn lại câu sai</button>
       </div>
     </div>
     <div id="reviewList" style="margin-top:20px"></div>
@@ -1094,6 +1096,16 @@ function completionTick(completed, label = "Đã hoàn thành") {
     : "";
 }
 
+function answerMark(question) {
+  const selected = exam.answers[question.id] || [];
+  if (!selected.length || !question.correct.length) return "";
+  const correct = selected.length === question.correct.length &&
+    selected.every(key => question.correct.includes(key));
+  return correct
+    ? completionTick(true, "Đúng")
+    : '<span class="completion-tick is-wrong" role="img" aria-label="Sai" title="Sai">✕</span>';
+}
+
 function markSectionComplete(setId, section) {
   const progressForSet = getP(setId);
   progressForSet.completed ??= {};
@@ -1228,6 +1240,11 @@ function openSubject(id) {
         <button class="btn" data-instant-exam="${elc201CombinedExam.id}">Thi 60p · Chấm ngay${completionTick(getP(elc201CombinedExam.id).completed?.instantExam)}</button>
         <button class="btn ghost" data-exam="${elc201CombinedExam.id}">Thi 60p · Chấm khi nộp${completionTick(getP(elc201CombinedExam.id).completed?.exam)}</button>
       </div>`;
+    const review = document.createElement("button");
+    review.className = "btn ghost";
+    review.dataset.missed = elc201CombinedExam.id;
+    review.textContent = "Ôn lại câu sai (" + missedQuestions(elc201CombinedExam).length + ")";
+    combined.querySelector("div").appendChild(review);
     grid.appendChild(combined);
   }
   curSubject.sets.forEach(set => {
@@ -1277,13 +1294,13 @@ function startKahoot(setId, reviewMisses = false) {
   const set = findSet(setId);
   const questions = reviewMisses ? missedQuestions(set) : [...set.questions];
   if (!questions.length) {
-    alert("Bộ đề này chưa có câu sai cần luyện. Hãy làm Kahoot hoặc nộp bài Thi 50p để ghi nhận câu sai.");
+    alert(set === elc201CombinedExam ? "Chưa có câu sai cần ôn từ đề tổng hợp. Câu sai được lưu khi nộp bài." : "Bộ đề này chưa có câu sai cần luyện. Hãy làm Kahoot hoặc nộp bài Thi 50p để ghi nhận câu sai.");
     return;
   }
   kReviewingMisses = reviewMisses;
-  curSubject = SUBJECTS.find(s => s.sets.some(st => st.id === setId));
+  curSubject = set === elc201CombinedExam ? elc201Subject : SUBJECTS.find(s => s.sets.some(st => st.id === setId));
   kSetId = setId;
-  kList = questions;
+  kList = set === elc201CombinedExam ? shuffleQuestions(questions.map(shuffleQuestionOptions)) : questions;
   kIdx = 0;
   kStreak = 0;
   kScore = 0;
@@ -1357,7 +1374,8 @@ function questionPrompt(q) {
 
 function renderKahoot() {
   const q = kList[kIdx];
-  document.getElementById("kNum").textContent = `Câu ${kIdx+1} / ${kList.length}`;
+  const origin = q.originalSetName ? ` · ${q.originalSetName} · Câu gốc ${q.originalQuestionId}` : "";
+  document.getElementById("kNum").textContent = `Câu ${kIdx+1} / ${kList.length}${origin}`;
   document.getElementById("kText").textContent = questionPrompt(q);
   document.getElementById("kahootStreak").textContent = q.correct.length ? kStreak : "—";
   document.getElementById("kahootScore").textContent = q.correct.length ? kScore : "—";
@@ -1459,6 +1477,12 @@ function gradeKahoot(selected) {
       </div>`;
   }
 
+  if (kReviewingMisses && kSetId === elc201CombinedExam.id) {
+    const tip = document.createElement("div");
+    tip.className = "explanation";
+    tip.textContent = quickTipForQuestion(q);
+    fb.appendChild(tip);
+  }
   document.getElementById("kahootStreak").textContent = kStreak;
   document.getElementById("kahootScore").textContent = kScore;
   document.getElementById("kNext").textContent = "Câu tiếp theo ➔";
@@ -1633,7 +1657,7 @@ function renderExam() {
   opts.innerHTML = "";
   q.options.forEach(o => {
     const d = document.createElement("div");
-    const reveal = exam.instantFeedback && sel.length > 0 && q.correct.length > 0;
+    const reveal = exam.instantFeedback && Boolean(exam.lockedAnswers[q.id]) && q.correct.length > 0;
      d.className = "opt" + (reveal && q.correct.includes(o.key) ? " right" : reveal && sel.includes(o.key) ? " wrong" : sel.includes(o.key) ? " sel" : "");
     d.innerHTML = `<b>${o.key}.</b> <span>${escapeQuestionText(o.text)}</span>`;
     d.onclick = () => selectOpt(o.key);
@@ -1653,7 +1677,8 @@ function renderExam() {
   exam.qs.forEach((qq, i) => {
     const b = document.createElement("button");
     const completed = hasFullAnswer(qq);
-    b.innerHTML = (i + 1) + completionTick(completed, "Đã trả lời đủ");
+    const graded = exam.instantFeedback && exam.lockedAnswers[qq.id];
+    b.innerHTML = (i + 1) + (graded ? answerMark(qq) : "");
     if (completed) b.classList.add("done");
     if (exam.flags.has(qq.id)) b.classList.add("flag");
     if (i === exam.idx) b.classList.add("cur");
@@ -1886,7 +1911,7 @@ function renderExamFeedback(q, selected) {
   const panel = document.getElementById("examFeedback");
   panel.innerHTML = "";
   panel.className = "hidden";
-  if (!exam.instantFeedback || !selected.length) return;
+  if (!exam.instantFeedback || !exam.lockedAnswers[q.id]) return;
 
   const correct = q.correct || [];
   const required = q.selectionCount || correct.length || 1;
@@ -1983,6 +2008,7 @@ function submitExam(auto) {
     else if (q.correct.length) {
       wrong++;
       recordMiss(q.originalSetId ?? exam.setId, q.originalQuestionId ?? q.id);
+      if (exam.set === elc201CombinedExam) recordMiss(exam.setId, q.id);
     }
   });
   if (wrong) saveProgress();
@@ -1995,6 +2021,11 @@ function submitExam(auto) {
     attempts.push({ setId: exam.setId, date: new Date().toISOString(), right, wrong, blank, pct, secs });
     store.set("attempts", attempts);
   }
+  const combinedMisses = exam.set === elc201CombinedExam ? missedQuestions(elc201CombinedExam).length : 0;
+  const reviewMissesButton = document.getElementById("reviewCombinedMissesBtn");
+  reviewMissesButton.classList.toggle("hidden", combinedMisses === 0);
+  reviewMissesButton.textContent = "Ôn lại câu sai (" + combinedMisses + ")";
+  document.getElementById("reviewList").replaceChildren();
   document.getElementById("reviewBtn").textContent = ungraded ? "Xem lại lựa chọn" : "Xem lại bài thi & Đáp án";
   document.getElementById("resScore").textContent = ungraded ? (exam.qs.length - blank) + "/" + exam.qs.length + " đã trả lời" : `${right}/${gradedCount}`;
   document.getElementById("resGrade").textContent = ungraded ? "—/100" : `${pct}/100`;
@@ -2006,6 +2037,7 @@ function submitExam(auto) {
   show("result");
 }
 
+document.getElementById("reviewCombinedMissesBtn").onclick = () => startKahoot(elc201CombinedExam.id, true);
 document.getElementById("retryBtn").onclick = () => startExam(exam.setId, exam.instantFeedback);
 document.getElementById("reviewBtn").onclick = () => {
   const list = document.getElementById("reviewList");
@@ -2015,7 +2047,7 @@ document.getElementById("reviewBtn").onclick = () => {
     const card = document.createElement("div");
     card.className = "card";
     card.style.marginBottom = "14px";
-    card.innerHTML = `<div class="review-question" style="font-weight:600;font-size:16px;margin-bottom:8px">Câu ${i+1}: ${escapeQuestionText(q.text)}</div>`;
+    card.innerHTML = `<div class="review-question" style="font-weight:600;font-size:16px;margin-bottom:8px">Câu ${i+1}: ${escapeQuestionText(q.text)}${answerMark(q)}</div>`;
     
     if (q.originalSetName) {
       const source = document.createElement("div");
